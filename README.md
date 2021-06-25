@@ -16,14 +16,12 @@ TODO: Download a release.
    go get
    ```
 
-3. Set environment variables.
-   ```
-   export UNCN_CLUB_ORG_ID=226
-   export UNCN_PAST_DURATION_DAYS=7
-   export UNCN_FUTURE_DURATION_DAYS=7
-   ```
-
 4. Run the tool.
    ```
-   go run main.go
+   go run main.go <CLUB_ID>
    ```
+
+### TODO
+* [ ] Use `cmd`
+* [ ] Implement a logger
+* [ ] Generate newsletter
