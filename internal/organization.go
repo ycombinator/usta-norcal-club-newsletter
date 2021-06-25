@@ -86,6 +86,8 @@ func (o *Organization) LoadTeams() (*Organization, error) {
 	}
 
 	wg.Wait()
+
+	return o, nil
 }
 
 // String returns the string representation of an organization.
