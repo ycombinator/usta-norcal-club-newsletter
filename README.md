@@ -15,8 +15,13 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
 4. Run the executable.
    ```
-   ./usta-norcal-club-newsletter
+   ./usta-norcal-club-newsletter [<ORG_ID>]
    ```
+
+   The `ORG_ID` argument is optional. The default `ORG_ID` is 226, which is the 
+   Organization ID for Almaden Valley Athletic Club.
+
+   ![Screenshot showing the organization ID for Almaden Valley Athletic Club](img/avac_id.png)
 
 ## Development
 
@@ -30,9 +35,6 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
 4. Run the tool.
    ```
-   go run main.go <CLUB_ID>
+   go run main.go [<ORG_ID>]
    ```
-
-### TODO
-* [ ] Use `cmd`
-* [ ] Implement a logger
+   
