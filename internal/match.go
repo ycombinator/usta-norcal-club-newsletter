@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -34,12 +33,11 @@ type Line struct {
 	WinningTeam Team
 }
 
-func (m *Match) String(forOrg *Organization) string {
+func (m *Match) ForOrganization(forOrg *Organization) (date time.Time, first string, outcome string, locator string, second string) {
 	m.HomeTeam.LoadOrganization()
 	m.VisitingTeam.LoadOrganization()
 
 	var firstTeam, secondTeam *Team
-	var locator string
 	if m.HomeTeam.Organization.Equals(forOrg) {
 		firstTeam = m.HomeTeam
 		secondTeam = m.VisitingTeam
@@ -50,38 +48,19 @@ func (m *Match) String(forOrg *Organization) string {
 		locator = "@"
 	}
 
-	var str strings.Builder
-	str.WriteString(m.Date.Format("Mon, Jan 02"))
-	str.WriteString("\t")
+	date = m.Date
 
-	if m.Outcome.WinningTeam == nil {
-		str.WriteString(firstTeam.Organization.ShortName())
-		str.WriteString(" ")
-		str.WriteString(firstTeam.ShortName())
-		str.WriteString(" " + locator + " ")
-		str.WriteString(secondTeam.Organization.ShortName())
-		str.WriteString(" ")
-		str.WriteString(secondTeam.ShortName())
-	} else {
+	first = firstTeam.Organization.ShortName() + " " + firstTeam.ShortName()
+	second = secondTeam.Organization.ShortName() + " " + secondTeam.ShortName()
+	if m.Outcome.WinningTeam != nil {
 		m.Outcome.WinningTeam.LoadOrganization()
 
-		var outcome string
 		if m.Outcome.WinningTeam == firstTeam {
-			outcome = fmt.Sprintf("WON %d - %d", m.Outcome.WinnerPoints, m.Outcome.LoserPoints)
+			outcome = fmt.Sprintf("won %d - %d", m.Outcome.WinnerPoints, m.Outcome.LoserPoints)
 		} else {
-			outcome = fmt.Sprintf("LOST %d - %d", m.Outcome.LoserPoints, m.Outcome.WinnerPoints)
+			outcome = fmt.Sprintf("lost %d - %d", m.Outcome.LoserPoints, m.Outcome.WinnerPoints)
 		}
-
-		str.WriteString(firstTeam.Organization.ShortName())
-		str.WriteString(" ")
-		str.WriteString(firstTeam.ShortName())
-		str.WriteString("   " + outcome + "  ")
-		str.WriteString(locator + " ")
-		str.WriteString(secondTeam.Organization.ShortName())
-		str.WriteString(" ")
-		str.WriteString(secondTeam.ShortName())
-		str.WriteString(" ")
 	}
 
-	return str.String()
+	return
 }

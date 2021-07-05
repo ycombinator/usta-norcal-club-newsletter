@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
 )
 
 type Newsletter struct {
@@ -69,17 +71,32 @@ func (n *Newsletter) String() string {
 	var str strings.Builder
 
 	str.WriteString("Recent matches:\n")
+	table := tablewriter.NewWriter(&str)
+	table.SetAutoWrapText(false)
 	for _, m := range pastMatches {
-		str.WriteString(m.String(n.org))
-		str.WriteString("\n")
+		date, first, outcome, locator, second := m.ForOrganization(n.org)
+		table.Append([]string{
+			date.Format("Mon, Jan 02"),
+			first,
+			outcome,
+			locator + " " + second,
+		})
 	}
+	table.Render()
 	str.WriteString("\n")
 
 	str.WriteString("Upcoming matches:\n")
+	table = tablewriter.NewWriter(&str)
+	table.SetAutoWrapText(false)
 	for _, m := range futureMatches {
-		str.WriteString(m.String(n.org))
-		str.WriteString("\n")
+		date, first, _, locator, second := m.ForOrganization(n.org)
+		table.Append([]string{
+			date.Format("Mon, Jan 02"),
+			first,
+			locator + " " + second,
+		})
 	}
+	table.Render()
 	str.WriteString("\n")
 
 	return str.String()
