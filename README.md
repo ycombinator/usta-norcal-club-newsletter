@@ -10,7 +10,7 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
 3. Locate your platform's folder.
    ```
-   cd $RELEASE_DIR/bin/$YOUR_PLATFORM
+   cd $RELEASE_DIR/dist/$YOUR_PLATFORM
    ```
 
 4. Run the executable.
