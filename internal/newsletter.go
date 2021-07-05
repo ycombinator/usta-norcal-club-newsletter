@@ -10,7 +10,7 @@ import (
 type Newsletter struct {
 	cfg Config
 
-	org Organization
+	org *Organization
 }
 
 func NewNewsletter(cfg Config) (*Newsletter, error) {
@@ -25,7 +25,7 @@ func (n *Newsletter) Generate() error {
 	if err != nil {
 		return err
 	}
-	n.org = *org
+	n.org = org
 
 	if _, err = n.org.LoadTeams(); err != nil {
 		return err
@@ -68,16 +68,16 @@ func (n *Newsletter) String() string {
 
 	var str strings.Builder
 
-	str.WriteString("Recent matches (home team shown first):\n")
+	str.WriteString("Recent matches:\n")
 	for _, m := range pastMatches {
-		str.WriteString(m.String())
+		str.WriteString(m.String(n.org))
 		str.WriteString("\n")
 	}
 	str.WriteString("\n")
 
-	str.WriteString("Upcoming matches (home team shown first):\n")
+	str.WriteString("Upcoming matches:\n")
 	for _, m := range futureMatches {
-		str.WriteString(m.String())
+		str.WriteString(m.String(n.org))
 		str.WriteString("\n")
 	}
 	str.WriteString("\n")

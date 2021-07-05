@@ -34,40 +34,52 @@ type Line struct {
 	WinningTeam Team
 }
 
-func (m *Match) String() string {
+func (m *Match) String(forOrg *Organization) string {
 	m.HomeTeam.LoadOrganization()
 	m.VisitingTeam.LoadOrganization()
+
+	var firstTeam, secondTeam *Team
+	var locator string
+	if m.HomeTeam.Organization.Equals(forOrg) {
+		firstTeam = m.HomeTeam
+		secondTeam = m.VisitingTeam
+		locator = "vs."
+	} else {
+		firstTeam = m.VisitingTeam
+		secondTeam = m.HomeTeam
+		locator = "@"
+	}
 
 	var str strings.Builder
 	str.WriteString(m.Date.Format("Mon, Jan 02"))
 	str.WriteString("\t")
 
 	if m.Outcome.WinningTeam == nil {
-		str.WriteString(m.HomeTeam.Organization.ShortName())
+		str.WriteString(firstTeam.Organization.ShortName())
 		str.WriteString(" ")
-		str.WriteString(m.HomeTeam.ShortName())
-		str.WriteString(" vs. ")
-		str.WriteString(m.VisitingTeam.Organization.ShortName())
+		str.WriteString(firstTeam.ShortName())
+		str.WriteString(" " + locator + " ")
+		str.WriteString(secondTeam.Organization.ShortName())
 		str.WriteString(" ")
-		str.WriteString(m.VisitingTeam.ShortName())
+		str.WriteString(secondTeam.ShortName())
 	} else {
 		m.Outcome.WinningTeam.LoadOrganization()
 
 		var outcome string
-		if m.Outcome.WinningTeam == m.HomeTeam {
+		if m.Outcome.WinningTeam == firstTeam {
 			outcome = fmt.Sprintf("WON %d - %d", m.Outcome.WinnerPoints, m.Outcome.LoserPoints)
 		} else {
 			outcome = fmt.Sprintf("LOST %d - %d", m.Outcome.LoserPoints, m.Outcome.WinnerPoints)
 		}
 
-		str.WriteString(m.HomeTeam.Organization.ShortName())
+		str.WriteString(firstTeam.Organization.ShortName())
 		str.WriteString(" ")
-		str.WriteString(m.HomeTeam.ShortName())
+		str.WriteString(firstTeam.ShortName())
 		str.WriteString("   " + outcome + "  ")
-		str.WriteString("against ")
-		str.WriteString(m.VisitingTeam.Organization.ShortName())
+		str.WriteString(locator + " ")
+		str.WriteString(secondTeam.Organization.ShortName())
 		str.WriteString(" ")
-		str.WriteString(m.VisitingTeam.ShortName())
+		str.WriteString(secondTeam.ShortName())
 		str.WriteString(" ")
 	}
 

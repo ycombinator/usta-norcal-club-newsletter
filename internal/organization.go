@@ -103,3 +103,7 @@ func (o *Organization) ShortName() string {
 
 	return shortName
 }
+
+func (o *Organization) Equals(ao *Organization) bool {
+	return o.ID == ao.ID
+}
