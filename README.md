@@ -24,4 +24,3 @@ TODO: Download a release.
 ### TODO
 * [ ] Use `cmd`
 * [ ] Implement a logger
-* [ ] Generate newsletter
