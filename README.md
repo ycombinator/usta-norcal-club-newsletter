@@ -40,5 +40,10 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
 4. Run the tool.
    ```
-   go run main.go [<ORG_ID>]
+   make run
+   ```
+
+   If you want to specify the organization ID:
+   ```
+   ORG_ID=xxx make rune
    ```
