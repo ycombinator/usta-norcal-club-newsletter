@@ -20,7 +20,7 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
 4. Run the executable.
    ```
-   ./usta-norcal-club-newsletter [<ORG_ID>]
+   ./usta-norcal-club-newsletter <ORG_ID>
    ```
 
    The `ORG_ID` argument is optional. The default `ORG_ID` is 226, which is the
@@ -45,5 +45,5 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
    If you want to specify the organization ID:
    ```
-   ORG_ID=xxx make rune
+   ORG_ID=xxx make run
    ```
