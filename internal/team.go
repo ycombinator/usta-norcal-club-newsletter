@@ -59,6 +59,10 @@ func LoadTeam(id int) (*Team, error) {
 
 // LoadOrganization loads the organization for a team.
 func (t *Team) LoadOrganization() (*Team, error) {
+	if t.Organization != nil {
+		return t, nil
+	}
+
 	var orgID int
 
 	t.doc.Find("a").Each(func(i int, sel *goquery.Selection) {
@@ -98,6 +102,10 @@ func (t *Team) LoadOrganization() (*Team, error) {
 
 // LoadMatches loads the matches for a team.
 func (t *Team) LoadMatches() (*Team, error) {
+	if t.Matches != nil {
+		return t, nil
+	}
+
 	t.doc.Find("table tbody tr td table tbody tr").Each(func(i int, sel *goquery.Selection) {
 		bgcolor, exists := sel.Attr("bgcolor")
 		if !exists {
