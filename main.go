@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -22,18 +21,15 @@ func main() {
 		c.OrganizationID = int(oID)
 	}
 
-	o, err := internal.LoadOrganization(c.OrganizationID)
+	n, err := internal.NewNewsletter(c)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	o.LoadTeams()
-
-	j, err := json.Marshal(o)
-	if err != nil {
+	if err := n.Generate(); err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(string(j))
+
+	fmt.Println(n)
 }

@@ -3,8 +3,6 @@ package internal
 import (
 	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -16,10 +14,15 @@ const (
 	organizationURL = "https://www.ustanorcal.com/organization.asp?id=%d"
 )
 
+var shortNameTranslations = map[string]string{
+	"BCC":  "Courtside",
+	"SMTC": "Sunnyvale",
+}
+
 // Organization represents a USTA NorCal organization.
 type Organization struct {
-	ID int `json:"id"`
-	Name string `json:"name"`
+	ID    int     `json:"id"`
+	Name  string  `json:"name"`
 	Teams []*Team `json:"teams"`
 
 	doc *goquery.Document
@@ -27,19 +30,19 @@ type Organization struct {
 
 // LoadOrganization loads the organization details for the given organization ID.
 func LoadOrganization(id int) (*Organization, error) {
-  res, err := http.Get(fmt.Sprintf(organizationURL, id))
-  if err != nil {
+	res, err := http.Get(fmt.Sprintf(organizationURL, id))
+	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch organization page")
-  }
-  defer res.Body.Close()
-  if res.StatusCode != 200 {
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
 		return nil, errors.Wrapf(err, "error fetching organization page, code: %d", res.StatusCode)
-  }
+	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
-  if err != nil {
+	if err != nil {
 		return nil, errors.Wrap(err, "could not read organization page")
-  }
+	}
 
 	o := new(Organization)
 	o.doc = doc
@@ -55,23 +58,17 @@ func (o *Organization) LoadTeams() (*Organization, error) {
 
 	o.doc.Find("a").Each(func(i int, sel *goquery.Selection) {
 		u, exists := sel.Attr("href")
-		if !exists{ 
+		if !exists {
 			return
 		}
 
 		if strings.HasPrefix(u, "teaminfo.asp?") {
-			pu, err := url.Parse(u)
+			teamID, err := parseTeamID(u)
 			if err != nil {
 				return
 			}
 
-			v := pu.Query().Get("id")
-			teamID, err := strconv.ParseInt(v, 10, 0)
-			if err != nil {
-				return
-			}
-
-			teamIDs = append(teamIDs, int(teamID))
+			teamIDs = append(teamIDs, teamID)
 		}
 	})
 
@@ -86,21 +83,23 @@ func (o *Organization) LoadTeams() (*Organization, error) {
 	}
 
 	wg.Wait()
-
 	return o, nil
 }
 
-// String returns the string representation of an organization.
-func (o *Organization) String() string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Name: %s\n", o.Name))
+func (o *Organization) ShortName() string {
+	parts := strings.Split(strings.TrimSpace(o.Name), " ")
 
-	if len(o.Teams) > 0 {
-		sb.WriteString("Teams:\n")
-		for _, t := range o.Teams {
-			sb.WriteString(fmt.Sprintf("- %s\n", t.Name))
+	var shortName string
+	for _, part := range parts {
+		if part == "AND" {
+			continue
 		}
+		shortName += string(part[0])
 	}
 
-	return sb.String()
+	if t, exists := shortNameTranslations[shortName]; exists {
+		shortName = t
+	}
+
+	return shortName
 }
