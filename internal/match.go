@@ -53,23 +53,21 @@ func (m *Match) String() string {
 	} else {
 		m.Outcome.WinningTeam.LoadOrganization()
 
-		winner := m.Outcome.WinningTeam
-		var loser *Team
-		if winner == m.HomeTeam {
-			loser = m.VisitingTeam
+		var outcome string
+		if m.Outcome.WinningTeam == m.HomeTeam {
+			outcome = fmt.Sprintf("WON %d - %d", m.Outcome.WinnerPoints, m.Outcome.LoserPoints)
 		} else {
-			loser = m.HomeTeam
+			outcome = fmt.Sprintf("LOST %d - %d", m.Outcome.LoserPoints, m.Outcome.WinnerPoints)
 		}
 
-		str.WriteString(winner.Organization.ShortName())
+		str.WriteString(m.HomeTeam.Organization.ShortName())
 		str.WriteString(" ")
-		str.WriteString(winner.ShortName())
-		str.WriteString("   WON ")
-		str.WriteString(fmt.Sprintf("%d - %d", m.Outcome.WinnerPoints, m.Outcome.LoserPoints))
-		str.WriteString("   against ")
-		str.WriteString(loser.Organization.ShortName())
+		str.WriteString(m.HomeTeam.ShortName())
+		str.WriteString("   " + outcome + "  ")
+		str.WriteString("against ")
+		str.WriteString(m.VisitingTeam.Organization.ShortName())
 		str.WriteString(" ")
-		str.WriteString(loser.ShortName())
+		str.WriteString(m.VisitingTeam.ShortName())
 		str.WriteString(" ")
 	}
 
