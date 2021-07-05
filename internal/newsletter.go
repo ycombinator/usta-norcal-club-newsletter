@@ -70,34 +70,38 @@ func (n *Newsletter) String() string {
 
 	var str strings.Builder
 
-	str.WriteString("Recent matches:\n")
-	table := tablewriter.NewWriter(&str)
-	table.SetAutoWrapText(false)
-	for _, m := range pastMatches {
-		date, first, outcome, locator, second := m.ForOrganization(n.org)
-		table.Append([]string{
-			date.Format("Mon, Jan 02"),
-			first,
-			outcome,
-			locator + " " + second,
-		})
+	if len(pastMatches) > 0 {
+		str.WriteString("Recent matches:\n")
+		table := tablewriter.NewWriter(&str)
+		table.SetAutoWrapText(false)
+		for _, m := range pastMatches {
+			date, first, outcome, locator, second := m.ForOrganization(n.org)
+			table.Append([]string{
+				date.Format("Mon, Jan 02"),
+				first,
+				outcome,
+				locator + " " + second,
+			})
+		}
+		table.Render()
+		str.WriteString("\n")
 	}
-	table.Render()
-	str.WriteString("\n")
 
-	str.WriteString("Upcoming matches:\n")
-	table = tablewriter.NewWriter(&str)
-	table.SetAutoWrapText(false)
-	for _, m := range futureMatches {
-		date, first, _, locator, second := m.ForOrganization(n.org)
-		table.Append([]string{
-			date.Format("Mon, Jan 02"),
-			first,
-			locator + " " + second,
-		})
+	if len(futureMatches) > 0 {
+		str.WriteString("Upcoming matches:\n")
+		table := tablewriter.NewWriter(&str)
+		table.SetAutoWrapText(false)
+		for _, m := range futureMatches {
+			date, first, _, locator, second := m.ForOrganization(n.org)
+			table.Append([]string{
+				date.Format("Mon, Jan 02"),
+				first,
+				locator + " " + second,
+			})
+		}
+		table.Render()
+		str.WriteString("\n")
 	}
-	table.Render()
-	str.WriteString("\n")
 
 	return str.String()
 }
