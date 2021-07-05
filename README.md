@@ -6,11 +6,16 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
 
 1. Download the latest release from https://github.com/ycombinator/usta-norcal-club-newsletter/releases.
 
-2. Extract the release.
+2. Extract (unzip or untar) the release.
 
 3. Locate your platform's folder.
    ```
-   cd $RELEASE_DIR/dist/$YOUR_PLATFORM
+   cd $RELEASE_DIR/dist/$YOUR_OS/$YOUR_ARCH
+   ```
+
+   For example, if you've downloaded the 0.1.0 release and are on a 2019 Macbook Pro:
+   ```
+   cd usta-norcal-club-newsletter-0.1.0/dist/darwin/amd64
    ```
 
 4. Run the executable.
