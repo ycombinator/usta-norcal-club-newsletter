@@ -49,12 +49,16 @@ func (n *Newsletter) Generate() error {
 func (n *Newsletter) String() string {
 	var pastMatches, futureMatches []Match
 	now := time.Now()
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+
+	start := now.Add(-1*n.cfg.PastDuration)
+	end := now.Add(n.cfg.FutureDuration)
 
 	for _, t := range n.org.Teams {
 		for _, m := range t.Matches {
-			if m.Date.After(now) && m.Date.Before(now.Add(n.cfg.FutureDuration)) {
+			if (m.Date.Equal(now) || m.Date.After(now)) && m.Date.Before(end) {
 				futureMatches = append(futureMatches, m)
-			} else if m.Date.Before(now) && m.Date.After(now.Add(-1*n.cfg.PastDuration)) {
+			} else if m.Date.Before(now) && (m.Date.Equal(start) || m.Date.After(start)) {
 				pastMatches = append(pastMatches, m)
 			}
 		}
