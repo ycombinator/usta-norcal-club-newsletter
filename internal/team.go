@@ -117,7 +117,12 @@ func (t *Team) LoadMatches() (*Team, error) {
 		}
 
 		// Parse match date
-		c := sel.Find("td").Get(2).FirstChild
+		cells := sel.Find("td")
+		if cells.Length() < 2 {
+			return
+		}
+
+		c := cells.Get(2).FirstChild
 		if c.NextSibling != nil {
 			c = c.NextSibling.FirstChild
 		}
