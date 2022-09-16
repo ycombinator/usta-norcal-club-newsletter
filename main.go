@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/formatters"
+
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
 )
 
@@ -31,5 +33,6 @@ func main() {
 		return
 	}
 
-	fmt.Println(n)
+	consoleFormatter := formatters.ConsoleFormatter{}
+	consoleFormatter.Format(n)
 }
