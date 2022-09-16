@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-const avacOrganizationID = 226
+const asrcOrganizationID = 225
 
 // Config holds the application configuration.
 type Config struct {
@@ -16,7 +16,7 @@ type Config struct {
 // DefaultConfig returns the default application configuration.
 func DefaultConfig() Config {
 	return Config{
-		OrganizationID: avacOrganizationID,
+		OrganizationID: asrcOrganizationID,
 		PastDuration:   7 * 24 * time.Hour,
 		FutureDuration: 7 * 24 * time.Hour,
 	}
