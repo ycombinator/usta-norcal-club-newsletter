@@ -6,11 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
-
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
-
 	"github.com/olekukonko/tablewriter"
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
 )
 
 type ConsoleFormatter struct{}

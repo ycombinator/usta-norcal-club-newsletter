@@ -5,11 +5,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
-
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal/formatters"
-
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/formatters"
 )
 
 func main() {
