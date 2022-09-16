@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
+
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/formatters"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
@@ -23,7 +25,7 @@ func main() {
 		c.OrganizationID = int(oID)
 	}
 
-	n, err := internal.NewNewsletter(c)
+	n, err := core.NewNewsletter(c.OrganizationID)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -33,6 +35,13 @@ func main() {
 		return
 	}
 
-	consoleFormatter := formatters.ConsoleFormatter{}
-	consoleFormatter.Format(n)
+	fmtCfg := formatters.Config{
+		OrganizationID: c.OrganizationID,
+		PastDuration:   c.PastDuration,
+		FutureDuration: c.FutureDuration,
+	}
+	if err := c.Formatter.Format(n, fmtCfg); err != nil {
+		fmt.Println(err)
+		return
+	}
 }

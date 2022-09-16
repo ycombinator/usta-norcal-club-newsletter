@@ -6,18 +6,24 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
+
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
+
 	"github.com/olekukonko/tablewriter"
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
 )
 
 type ConsoleFormatter struct{}
 
-func (c *ConsoleFormatter) Format(n *internal.Newsletter) error {
-	var pastMatches, futureMatches []internal.Match
+func NewConsoleFormatter() *ConsoleFormatter {
+	return new(ConsoleFormatter)
+}
+
+func (c *ConsoleFormatter) Format(n *core.Newsletter, cfg Config) error {
+	var pastMatches, futureMatches []usta.Match
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 
-	cfg := n.Config()
 	start := now.Add(-1 * cfg.PastDuration)
 	end := now.Add(cfg.FutureDuration)
 

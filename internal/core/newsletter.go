@@ -1,32 +1,29 @@
-package internal
+package core
 
 import (
 	"sync"
+
+	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
 )
 
 type Newsletter struct {
-	cfg Config
-
-	org *Organization
+	orgID int
+	org   *usta.Organization
 }
 
-func NewNewsletter(cfg Config) (*Newsletter, error) {
+func NewNewsletter(orgID int) (*Newsletter, error) {
 	n := new(Newsletter)
-	n.cfg = cfg
+	n.orgID = orgID
 
 	return n, nil
 }
 
-func (n Newsletter) Config() Config {
-	return n.cfg
-}
-
-func (n Newsletter) Organization() *Organization {
+func (n Newsletter) Organization() *usta.Organization {
 	return n.org
 }
 
 func (n *Newsletter) Generate() error {
-	org, err := LoadOrganization(n.cfg.OrganizationID)
+	org, err := usta.LoadOrganization(n.orgID)
 	if err != nil {
 		return err
 	}
@@ -39,7 +36,7 @@ func (n *Newsletter) Generate() error {
 	var wg sync.WaitGroup
 	for _, t := range n.org.Teams {
 		wg.Add(1)
-		go func(t *Team) {
+		go func(t *usta.Team) {
 			t.LoadMatches()
 			wg.Done()
 		}(t)
