@@ -3,8 +3,10 @@ package usta
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pkg/errors"
@@ -106,4 +108,32 @@ func (o *Organization) ShortName() string {
 
 func (o *Organization) Equals(ao *Organization) bool {
 	return o.ID == ao.ID
+}
+
+func (o *Organization) Matches(past, future time.Duration) (pastMatches []Match, futureMatches []Match) {
+	now := time.Now()
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+
+	start := now.Add(-1 * past)
+	end := now.Add(future)
+
+	for _, t := range o.Teams {
+		for _, m := range t.Matches {
+			if (m.Date.Equal(now) || m.Date.After(now)) && m.Date.Before(end) {
+				futureMatches = append(futureMatches, m)
+			} else if m.Date.Before(now) && (m.Date.Equal(start) || m.Date.After(start)) {
+				pastMatches = append(pastMatches, m)
+			}
+		}
+	}
+
+	// Sort matches
+	sort.Slice(pastMatches, func(i, j int) bool {
+		return pastMatches[i].Date.Before(pastMatches[j].Date)
+	})
+	sort.Slice(futureMatches, func(i, j int) bool {
+		return futureMatches[i].Date.Before(futureMatches[j].Date)
+	})
+
+	return
 }
