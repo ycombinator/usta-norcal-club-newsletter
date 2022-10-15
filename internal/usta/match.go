@@ -2,6 +2,7 @@ package usta
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -51,7 +52,7 @@ func (m *Match) ForOrganization(forOrg *Organization) (date time.Time, first str
 	date = m.Date
 
 	first = firstTeam.Organization.ShortName() + " " + firstTeam.ShortName()
-	second = secondTeam.Organization.ShortName() + " " + secondTeam.ShortName()
+	second = strings.Title(strings.ToLower(secondTeam.Organization.Name))
 	if m.Outcome.WinningTeam != nil {
 		m.Outcome.WinningTeam.LoadOrganization()
 
