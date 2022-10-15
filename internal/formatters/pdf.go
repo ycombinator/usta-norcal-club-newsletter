@@ -53,7 +53,7 @@ func (p *PDFFormatter) Format(n *core.Newsletter, cfg Config) error {
 
 	if len(futureMatches) > 0 {
 		m.Line(10)
-		
+
 		m.Row(10, func() {
 			m.Col(12, func() {
 				m.Text("Future	 Matches", props.Text{
