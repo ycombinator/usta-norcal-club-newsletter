@@ -58,7 +58,7 @@ func (p *PDFFormatter) Format(n *core.Newsletter, cfg Config) error {
 
 		m.Row(10, func() {
 			m.Col(12, func() {
-				m.Text("Future	 Matches", props.Text{
+				m.Text("Upcoming Matches", props.Text{
 					Top:   3,
 					Style: consts.Bold,
 					Align: consts.Center,
