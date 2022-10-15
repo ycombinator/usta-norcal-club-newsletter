@@ -19,6 +19,7 @@ func (p *PDFFormatter) Format(n *core.Newsletter, cfg Config) error {
 	pastMatches, futureMatches := org.Matches(cfg.PastDuration, cfg.FutureDuration)
 
 	m := pdf.NewMaroto(consts.Portrait, consts.A4)
+	cellTextProps := props.Text{Size: 8, Top: 2}
 
 	if len(pastMatches) > 0 {
 		m.Row(10, func() {
@@ -34,25 +35,26 @@ func (p *PDFFormatter) Format(n *core.Newsletter, cfg Config) error {
 		for i, match := range pastMatches {
 			setRowColor(i, m)
 			date, first, outcome, locator, second := match.ForOrganization(org)
-			m.Row(10, func() {
+			m.Row(8, func() {
 				m.Col(2, func() {
-					m.Text(date.Format(" Mon, Jan 02"))
+					m.Text(date.Format(" Mon, Jan 02"), cellTextProps)
 				})
 				m.Col(4, func() {
-					m.Text(first)
+					m.Text(first, cellTextProps)
 				})
-				m.Col(2, func() {
-					m.Text(outcome)
+				m.Col(1, func() {
+					m.Text(outcome, cellTextProps)
 				})
-				m.Col(4, func() {
-					m.Text(locator + " " + second)
+				m.Col(5, func() {
+					m.Text(locator+" "+second, cellTextProps)
 				})
 			})
 		}
 	}
 
 	if len(futureMatches) > 0 {
-		m.Line(10)
+		//m.Line(10)
+		m.Row(10, func() {})
 
 		m.Row(10, func() {
 			m.Col(12, func() {
@@ -67,15 +69,15 @@ func (p *PDFFormatter) Format(n *core.Newsletter, cfg Config) error {
 		for i, match := range futureMatches {
 			setRowColor(i, m)
 			date, first, _, locator, second := match.ForOrganization(org)
-			m.Row(10, func() {
+			m.Row(8, func() {
 				m.Col(2, func() {
-					m.Text(date.Format(" Mon, Jan 02"))
+					m.Text(date.Format(" Mon, Jan 02"), cellTextProps)
 				})
 				m.Col(5, func() {
-					m.Text(first)
+					m.Text(first, cellTextProps)
 				})
 				m.Col(5, func() {
-					m.Text(locator + " " + second)
+					m.Text(locator+" "+second, cellTextProps)
 				})
 			})
 		}
