@@ -24,6 +24,7 @@ func DefaultConfig() Config {
 		OrganizationID: asrcOrganizationID,
 		PastDuration:   7 * 24 * time.Hour,
 		FutureDuration: 7 * 24 * time.Hour,
-		Formatter:      formatters.NewConsoleFormatter(),
+		//Formatter:      formatters.NewConsoleFormatter(),
+		Formatter: formatters.NewPDFFormatter(),
 	}
 }
