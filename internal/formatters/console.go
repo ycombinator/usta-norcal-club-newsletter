@@ -44,7 +44,7 @@ func (c *ConsoleFormatter) Format(n *core.Newsletter, cfg Config) error {
 		for _, m := range futureMatches {
 			date, first, _, locator, second := m.ForOrganization(org)
 			table.Append([]string{
-				date.Format("Mon, Jan 02"),
+				date.Format("Mon, Jan 02 03:04 PM"),
 				first,
 				locator + " " + second,
 			})

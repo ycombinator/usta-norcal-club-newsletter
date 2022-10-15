@@ -70,10 +70,10 @@ func (p *PDFFormatter) Format(n *core.Newsletter, cfg Config) error {
 			setRowColor(i, m)
 			date, first, _, locator, second := match.ForOrganization(org)
 			m.Row(8, func() {
-				m.Col(2, func() {
-					m.Text(date.Format(" Mon, Jan 02"), cellTextProps)
+				m.Col(3, func() {
+					m.Text(date.Format(" Mon, Jan 02 03:04 PM"), cellTextProps)
 				})
-				m.Col(5, func() {
+				m.Col(4, func() {
 					m.Text(first, cellTextProps)
 				})
 				m.Col(5, func() {

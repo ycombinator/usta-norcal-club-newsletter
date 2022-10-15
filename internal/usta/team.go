@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -133,8 +134,20 @@ func (t *Team) LoadMatches() (*Team, error) {
 			return
 		}
 
+		// Parse match times
+		c = cells.Get(4).FirstChild
+
+		v = strings.TrimSpace(c.Data)
+		hour, minute, err := parseTime(v)
+		if err != nil {
+			return
+		}
+		if hour > 0 {
+			dt = time.Date(dt.Year(), dt.Month(), dt.Day(), hour, minute, 0, 0, dt.Location())
+		}
+
 		// Parse opposing team ID
-		v = sel.Find("td").Get(5).FirstChild.Attr[0].Val
+		v = cells.Get(5).FirstChild.Attr[0].Val
 		teamID, err := parseTeamID(v)
 		if err != nil {
 			return
@@ -209,7 +222,37 @@ func (t *Team) ShortName() string {
 
 	return shortName
 }
+func parseTime(u string) (int, int, error) {
+	u = strings.TrimSpace(u)
+	if u == "" {
+		return 0, 0, nil
+	}
 
+	regex, err := regexp.Compile(`at[^\d]+(\d+):(\d\d)\s+([aApP]M)`)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	parts := regex.FindStringSubmatch(u)
+	if len(parts) < 4 {
+		return 0, 0, nil
+	}
+	hour, err := strconv.Atoi(string(parts[1]))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	minute, err := strconv.Atoi(string(parts[2]))
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if strings.ToLower(string(parts[3])) == "pm" {
+		hour += 12
+	}
+
+	return hour, minute, nil
+}
 func parseTeamID(u string) (int, error) {
 	pu, err := url.Parse(u)
 	if err != nil {
