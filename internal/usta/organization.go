@@ -17,8 +17,9 @@ const (
 )
 
 var shortNameTranslations = map[string]string{
-	"BCC":  "Courtside",
-	"SMTC": "Sunnyvale",
+	"BCC":   "Courtside",
+	"SMTC":  "Sunnyvale",
+	"VG&CC": "Villages",
 }
 
 // Organization represents a USTA NorCal organization.
