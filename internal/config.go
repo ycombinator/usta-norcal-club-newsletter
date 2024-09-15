@@ -22,8 +22,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		OrganizationID: asrcOrganizationID,
-		PastDuration:   7 * 24 * time.Hour,
-		FutureDuration: 12 * 7 * 24 * time.Hour,
+		PastDuration:   10 * 24 * time.Hour,
+		FutureDuration: 10 * 24 * time.Hour,
 		Formatter:      formatters.NewConsoleFormatter(),
 		//Formatter: formatters.NewPDFFormatter(),
 	}
