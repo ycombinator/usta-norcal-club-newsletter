@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	teamURL = "https://www.ustanorcal.com/teaminfo.asp?id=%d"
+	teamURL = "https://leagues.ustanorcal.com/teaminfo.asp?id=%d"
 )
 
 var (

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	organizationURL = "https://www.ustanorcal.com/organization.asp?id=%d"
+	organizationURL = "https://leagues.ustanorcal.com/organization.asp?id=%d"
 )
 
 var shortNameTranslations = map[string]string{
