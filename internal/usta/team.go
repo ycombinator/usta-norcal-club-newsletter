@@ -247,7 +247,7 @@ func parseTime(u string) (int, int, error) {
 		return 0, 0, err
 	}
 
-	if strings.ToLower(string(parts[3])) == "pm" {
+	if strings.ToLower(string(parts[3])) == "pm" && hour < 12 {
 		hour += 12
 	}
 
