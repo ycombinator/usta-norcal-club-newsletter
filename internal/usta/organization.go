@@ -118,7 +118,6 @@ func (o *Organization) Equals(ao *Organization) bool {
 
 func (o *Organization) Matches(past, future time.Duration) (pastMatches []Match, futureMatches []Match) {
 	now := time.Now()
-	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 
 	start := now.Add(-1 * past)
 	end := now.Add(future)
