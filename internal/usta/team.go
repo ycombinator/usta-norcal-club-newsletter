@@ -17,7 +17,8 @@ const (
 )
 
 var (
-	tz, _ = time.LoadLocation("America/Los_Angeles")
+	tz, _     = time.LoadLocation("America/Los_Angeles")
+	timeRegex = regexp.MustCompile(`at[^\d]+(\d+):(\d\d)\s+([aApP]M)`)
 )
 
 // Team represents a USTA NorCal team.
@@ -227,12 +228,7 @@ func parseTime(u string) (int, int, error) {
 		return 0, 0, nil
 	}
 
-	regex, err := regexp.Compile(`at[^\d]+(\d+):(\d\d)\s+([aApP]M)`)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	parts := regex.FindStringSubmatch(u)
+	parts := timeRegex.FindStringSubmatch(u)
 	if len(parts) < 4 {
 		return 0, 0, nil
 	}
