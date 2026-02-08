@@ -26,9 +26,7 @@ type Team struct {
 	ID           int           `json:"id"`
 	Organization *Organization `json:"organization"`
 	Name         string        `json:"name"`
-	FriendlyName string        `json:"friendly_name`
-	Matches      []Match       `json:"matches`
-	Players      []Player      `json:"players"`
+	Matches      []Match       `json:"matches"`
 
 	doc *goquery.Document
 }
