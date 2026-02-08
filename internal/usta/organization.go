@@ -81,7 +81,10 @@ func (o *Organization) LoadTeams() (*Organization, error) {
 		wg.Add(1)
 		go func(teamID int) {
 			defer wg.Done()
-			t, _ := LoadTeam(teamID)
+			t, err := LoadTeam(teamID)
+			if err != nil {
+				return
+			}
 			mu.Lock()
 			o.Teams = append(o.Teams, t)
 			mu.Unlock()

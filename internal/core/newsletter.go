@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
@@ -34,14 +35,23 @@ func (n *Newsletter) Generate() error {
 	}
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var errs []error
 	for _, t := range n.org.Teams {
 		wg.Add(1)
 		go func(t *usta.Team) {
-			t.LoadMatches()
-			wg.Done()
+			defer wg.Done()
+			if _, err := t.LoadMatches(); err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+			}
 		}(t)
 	}
 
 	wg.Wait()
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to load matches for %d team(s)", len(errs))
+	}
 	return nil
 }
