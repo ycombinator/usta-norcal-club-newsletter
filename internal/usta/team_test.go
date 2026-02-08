@@ -18,6 +18,8 @@ func TestParseTime(t *testing.T) {
 		"All 3 at 11:00 AM Warm up court available at 10:30am.": {11, 0, ""},
 		"All 3 at 12:00 PM CTS 3,4,5":                           {12, 0, ""},
 		"All 4 at 12:30 PM":                                     {12, 30, ""},
+		"All 3 at 12:00 AM":                                     {0, 0, ""},
+		"All 3 at 12:30 AM":                                     {0, 30, ""},
 	}
 
 	for input, test := range cases {
