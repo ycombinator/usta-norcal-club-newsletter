@@ -136,8 +136,16 @@ func (o *Organization) Matches(past, future time.Duration) (pastMatches []Match,
 	sort.Slice(pastMatches, func(i, j int) bool {
 		return pastMatches[i].Date.Before(pastMatches[j].Date)
 	})
+	orgTeamIDs := make(map[int]bool, len(o.Teams))
+	for _, t := range o.Teams {
+		orgTeamIDs[t.ID] = true
+	}
 	sort.Slice(futureMatches, func(i, j int) bool {
-		return futureMatches[i].Date.Before(futureMatches[j].Date)
+		if !futureMatches[i].Date.Equal(futureMatches[j].Date) {
+			return futureMatches[i].Date.Before(futureMatches[j].Date)
+		}
+		// At the same time, show home matches first.
+		return orgTeamIDs[futureMatches[i].HomeTeam.ID] && !orgTeamIDs[futureMatches[j].HomeTeam.ID]
 	})
 
 	return
