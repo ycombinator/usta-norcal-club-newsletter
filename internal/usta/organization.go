@@ -39,7 +39,7 @@ func LoadOrganization(id int) (*Organization, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return nil, errors.Wrapf(err, "error fetching organization page, code: %d", res.StatusCode)
+		return nil, fmt.Errorf("error fetching organization page, code: %d", res.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)

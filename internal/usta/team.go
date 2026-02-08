@@ -41,7 +41,7 @@ func LoadTeam(id int) (*Team, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return nil, errors.Wrapf(err, "error fetching team page, code: %d", res.StatusCode)
+		return nil, fmt.Errorf("error fetching team page, code: %d", res.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
