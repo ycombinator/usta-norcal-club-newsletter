@@ -4,7 +4,7 @@ GOOS?=$(shell go env GOOS)
 GOARCH?=$(shell go env GOARCH)
 
 run:
-	go run main.go $(ORG_ID)
+	go run main.go $(if $(ORG_ID),-org=$(ORG_ID)) $(if $(FORMAT),-format=$(FORMAT))
 
 build:
 	go build .

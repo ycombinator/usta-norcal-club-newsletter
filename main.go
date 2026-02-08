@@ -1,9 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
@@ -13,14 +13,20 @@ import (
 func main() {
 	c := internal.DefaultConfig()
 
-	if len(os.Args) > 1 {
-		oID, err := strconv.ParseInt(os.Args[1], 10, 0)
-		if err != nil {
-			fmt.Println("organization ID must be an integer")
-			return
-		}
+	orgID := flag.Int("org", c.OrganizationID, "USTA NorCal organization ID")
+	format := flag.String("format", "console", "output format: console or pdf")
+	flag.Parse()
 
-		c.OrganizationID = int(oID)
+	c.OrganizationID = *orgID
+
+	switch *format {
+	case "console":
+		c.Formatter = formatters.NewConsoleFormatter()
+	case "pdf":
+		c.Formatter = formatters.NewPDFFormatter()
+	default:
+		fmt.Fprintf(os.Stderr, "unknown format: %s (use 'console' or 'pdf')\n", *format)
+		os.Exit(1)
 	}
 
 	n, err := core.NewNewsletter(c.OrganizationID)
