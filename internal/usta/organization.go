@@ -76,12 +76,15 @@ func (o *Organization) LoadTeams() (*Organization, error) {
 	})
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 	for _, teamID := range teamIDs {
 		wg.Add(1)
 		go func(teamID int) {
+			defer wg.Done()
 			t, _ := LoadTeam(teamID)
+			mu.Lock()
 			o.Teams = append(o.Teams, t)
-			wg.Done()
+			mu.Unlock()
 		}(teamID)
 	}
 
