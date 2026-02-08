@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Match represents a match consisting of multiple lines.
@@ -52,7 +55,7 @@ func (m *Match) ForOrganization(forOrg *Organization) (date time.Time, first str
 	date = m.Date
 
 	first = firstTeam.Organization.ShortName() + " " + firstTeam.ShortName()
-	second = strings.Title(strings.ToLower(secondTeam.Organization.Name))
+	second = cases.Title(language.English).String(strings.ToLower(secondTeam.Organization.Name))
 	if m.Outcome.WinningTeam != nil {
 		m.Outcome.WinningTeam.LoadOrganization()
 
