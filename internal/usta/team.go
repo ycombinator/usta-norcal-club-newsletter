@@ -2,7 +2,6 @@ package usta
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -35,7 +34,7 @@ type Team struct {
 
 // LoadTeam loads a team's information for the given team ID.
 func LoadTeam(id int) (*Team, error) {
-	res, err := http.Get(fmt.Sprintf(teamURL, id))
+	res, err := httpClient.Get(fmt.Sprintf(teamURL, id))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch team page")
 	}

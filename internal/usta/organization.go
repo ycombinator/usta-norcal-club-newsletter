@@ -2,7 +2,6 @@ package usta
 
 import (
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"sync"
@@ -33,7 +32,7 @@ type Organization struct {
 
 // LoadOrganization loads the organization details for the given organization ID.
 func LoadOrganization(id int) (*Organization, error) {
-	res, err := http.Get(fmt.Sprintf(organizationURL, id))
+	res, err := httpClient.Get(fmt.Sprintf(organizationURL, id))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not fetch organization page")
 	}
