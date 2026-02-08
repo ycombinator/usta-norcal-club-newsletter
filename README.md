@@ -27,14 +27,16 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
    | Flag | Default | Description |
    |------|---------|-------------|
    | `-org` | `225` | USTA NorCal organization ID |
+   | `-teams` | | Comma-separated list of additional team IDs to track |
    | `-format` | `console` | Output format: `console` or `pdf` |
 
    **Examples:**
    ```
-   ./usta-norcal-club-newsletter                  # Default org, console output
-   ./usta-norcal-club-newsletter -org=300         # Specify a different organization
-   ./usta-norcal-club-newsletter -format=pdf      # Generate PDF newsletter
-   ./usta-norcal-club-newsletter help             # Show help message
+   ./usta-norcal-club-newsletter                         # Default org, console output
+   ./usta-norcal-club-newsletter -org=300                # Specify a different organization
+   ./usta-norcal-club-newsletter -teams=123,456          # Track additional teams by ID
+   ./usta-norcal-club-newsletter -format=pdf             # Generate PDF newsletter
+   ./usta-norcal-club-newsletter help                    # Show help message
    ```
 
    ![Screenshot showing the organization ID for Almaden Valley Athletic Club](img/avac_id.png)
@@ -54,9 +56,10 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
    make run
    ```
 
-   If you want to specify the organization ID or output format:
+   If you want to specify the organization ID, additional teams, or output format:
    ```
    ORG_ID=300 make run
+   TEAMS=123,456 make run
    FORMAT=pdf make run
-   ORG_ID=300 FORMAT=pdf make run
+   ORG_ID=300 TEAMS=123,456 FORMAT=pdf make run
    ```

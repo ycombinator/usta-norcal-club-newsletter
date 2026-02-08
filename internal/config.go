@@ -11,6 +11,7 @@ const asrcOrganizationID = 225
 // Config holds the application configuration.
 type Config struct {
 	OrganizationID int
+	TeamIDs        []int
 
 	PastDuration   time.Duration
 	FutureDuration time.Duration

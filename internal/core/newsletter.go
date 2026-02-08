@@ -8,13 +8,15 @@ import (
 )
 
 type Newsletter struct {
-	orgID int
-	org   *usta.Organization
+	orgID   int
+	teamIDs []int
+	org     *usta.Organization
 }
 
-func NewNewsletter(orgID int) (*Newsletter, error) {
+func NewNewsletter(orgID int, teamIDs []int) (*Newsletter, error) {
 	n := new(Newsletter)
 	n.orgID = orgID
+	n.teamIDs = teamIDs
 
 	return n, nil
 }
@@ -32,6 +34,35 @@ func (n *Newsletter) Generate() error {
 
 	if _, err = n.org.LoadTeams(); err != nil {
 		return err
+	}
+
+	// Load additional teams specified by ID.
+	if len(n.teamIDs) > 0 {
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		var extraTeams []*usta.Team
+		var errs []error
+		for _, id := range n.teamIDs {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				t, err := usta.LoadTeam(id)
+				if err != nil {
+					mu.Lock()
+					errs = append(errs, err)
+					mu.Unlock()
+					return
+				}
+				mu.Lock()
+				extraTeams = append(extraTeams, t)
+				mu.Unlock()
+			}(id)
+		}
+		wg.Wait()
+		if len(errs) > 0 {
+			return fmt.Errorf("failed to load %d extra team(s)", len(errs))
+		}
+		n.org.Teams = append(n.org.Teams, extraTeams...)
 	}
 
 	var wg sync.WaitGroup
