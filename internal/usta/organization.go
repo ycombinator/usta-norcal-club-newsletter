@@ -32,26 +32,45 @@ type Organization struct {
 
 // LoadOrganization loads the organization details for the given organization ID.
 func LoadOrganization(id int) (*Organization, error) {
-	res, err := httpClient.Get(fmt.Sprintf(organizationURL, id))
+	cacheKey := fmt.Sprintf("org:%d", id)
+
+	// Use singleflight to deduplicate concurrent requests
+	result, err, _ := orgGroup.Do(cacheKey, func() (interface{}, error) {
+		// Check cache first
+		if cached, ok := orgCache.get(cacheKey); ok {
+			return cached.(*Organization), nil
+		}
+
+		res, err := httpClient.Get(fmt.Sprintf(organizationURL, id))
+		if err != nil {
+			return nil, errors.Wrap(err, "could not fetch organization page")
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			return nil, fmt.Errorf("error fetching organization page, code: %d", res.StatusCode)
+		}
+
+		doc, err := goquery.NewDocumentFromReader(res.Body)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read organization page")
+		}
+
+		o := new(Organization)
+		o.doc = doc
+		o.ID = id
+		o.Name = doc.Find("table tbody tr td font b").First().Text()
+
+		// Store in cache
+		orgCache.set(cacheKey, o)
+
+		return o, nil
+	})
+
 	if err != nil {
-		return nil, errors.Wrap(err, "could not fetch organization page")
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("error fetching organization page, code: %d", res.StatusCode)
+		return nil, err
 	}
 
-	doc, err := goquery.NewDocumentFromReader(res.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not read organization page")
-	}
-
-	o := new(Organization)
-	o.doc = doc
-	o.ID = id
-	o.Name = doc.Find("table tbody tr td font b").First().Text()
-
-	return o, nil
+	return result.(*Organization), nil
 }
 
 // LoadTeams loads teams for an organization.
