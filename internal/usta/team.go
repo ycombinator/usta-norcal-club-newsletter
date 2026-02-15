@@ -105,6 +105,19 @@ func (t *Team) LoadMatches() (*Team, error) {
 		return t, nil
 	}
 
+	// First pass: collect all match data and opposing team IDs
+	type matchData struct {
+		date         time.Time
+		teamID       int
+		location     string
+		outcomeVerb  string
+		winnerPoints int
+		loserPoints  int
+	}
+
+	var matchDataList []matchData
+	var opposingTeamIDs []int
+
 	t.doc.Find("table tbody tr td table tbody tr").Each(func(i int, sel *goquery.Selection) {
 		bgcolor, exists := sel.Attr("bgcolor")
 		if !exists {
@@ -151,28 +164,8 @@ func (t *Team) LoadMatches() (*Team, error) {
 			return
 		}
 
-		o, err := LoadTeam(teamID)
-		if err != nil {
-			return
-		}
-
 		// Parse location (home or away)
 		location := sel.Find("td").Get(6).FirstChild.Data
-
-		var homeTeam, visitingTeam *Team
-		if location == "Home" {
-			homeTeam = t
-			visitingTeam = o
-		} else {
-			homeTeam = o
-			visitingTeam = t
-		}
-
-		m := Match{
-			Date:         dt,
-			HomeTeam:     homeTeam,
-			VisitingTeam: visitingTeam,
-		}
 
 		// Parse outcome
 		v = sel.Find("td").Get(7).FirstChild.Data
@@ -181,9 +174,68 @@ func (t *Team) LoadMatches() (*Team, error) {
 			return
 		}
 
-		if verb != "" {
+		matchDataList = append(matchDataList, matchData{
+			date:         dt,
+			teamID:       teamID,
+			location:     location,
+			outcomeVerb:  verb,
+			winnerPoints: winnerPoints,
+			loserPoints:  loserPoints,
+		})
+		opposingTeamIDs = append(opposingTeamIDs, teamID)
+	})
+
+	// Second pass: load all opposing teams in parallel
+	type teamResult struct {
+		team *Team
+		err  error
+		idx  int
+	}
+
+	teamChan := make(chan teamResult, len(opposingTeamIDs))
+
+	for idx, teamID := range opposingTeamIDs {
+		go func(idx, teamID int) {
+			team, err := LoadTeam(teamID)
+			teamChan <- teamResult{team: team, err: err, idx: idx}
+		}(idx, teamID)
+	}
+
+	// Collect results
+	opposingTeams := make([]*Team, len(opposingTeamIDs))
+	for range opposingTeamIDs {
+		result := <-teamChan
+		if result.err != nil {
+			continue // Skip teams that failed to load
+		}
+		opposingTeams[result.idx] = result.team
+	}
+
+	// Third pass: build matches with loaded teams
+	for idx, md := range matchDataList {
+		o := opposingTeams[idx]
+		if o == nil {
+			continue // Skip if team failed to load
+		}
+
+		var homeTeam, visitingTeam *Team
+		if md.location == "Home" {
+			homeTeam = t
+			visitingTeam = o
+		} else {
+			homeTeam = o
+			visitingTeam = t
+		}
+
+		m := Match{
+			Date:         md.date,
+			HomeTeam:     homeTeam,
+			VisitingTeam: visitingTeam,
+		}
+
+		if md.outcomeVerb != "" {
 			var winningTeam *Team
-			if verb == "Won" {
+			if md.outcomeVerb == "Won" {
 				winningTeam = t
 			} else {
 				winningTeam = o
@@ -195,15 +247,15 @@ func (t *Team) LoadMatches() (*Team, error) {
 				LoserPoints  int
 			}{
 				WinningTeam:  winningTeam,
-				WinnerPoints: winnerPoints,
-				LoserPoints:  loserPoints,
+				WinnerPoints: md.winnerPoints,
+				LoserPoints:  md.loserPoints,
 			}
 
 			m.Outcome = outcome
 		}
 
 		t.Matches = append(t.Matches, m)
-	})
+	}
 
 	return t, nil
 }
