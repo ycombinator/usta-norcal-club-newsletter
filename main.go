@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
@@ -30,6 +31,7 @@ Examples:
   usta-norcal-club-newsletter -org=300                Specify a different organization
   usta-norcal-club-newsletter -teams=123,456          Track additional teams by ID
   usta-norcal-club-newsletter -format=pdf             Generate PDF newsletter
+  usta-norcal-club-newsletter -past=7 -future=14      Show 7 days back and 14 days ahead
   usta-norcal-club-newsletter help                    Show this help message
 `)
 }
@@ -41,6 +43,8 @@ func main() {
 	orgID := flag.Int("org", c.OrganizationID, "USTA NorCal organization ID")
 	teams := flag.String("teams", "", "comma-separated list of additional team IDs to track")
 	format := flag.String("format", "console", "output format: console or pdf")
+	pastDays := flag.Int("past", int(c.PastDuration.Hours()/24), "number of days back to include past match results")
+	futureDays := flag.Int("future", int(c.FutureDuration.Hours()/24), "number of days ahead to include upcoming matches")
 
 	// Handle "help" sub-command before flag.Parse
 	if len(os.Args) > 1 && os.Args[1] == "help" {
@@ -51,6 +55,8 @@ func main() {
 	flag.Parse()
 
 	c.OrganizationID = *orgID
+	c.PastDuration = time.Duration(*pastDays) * 24 * time.Hour
+	c.FutureDuration = time.Duration(*futureDays) * 24 * time.Hour
 
 	if *teams != "" {
 		for _, s := range strings.Split(*teams, ",") {
