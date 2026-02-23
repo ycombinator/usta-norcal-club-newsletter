@@ -1,6 +1,7 @@
 package usta
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -38,8 +39,11 @@ type Line struct {
 }
 
 func (m *Match) ForOrganization(forOrg *Organization) (date time.Time, first string, outcome string, locator string, second string) {
-	m.HomeTeam.LoadOrganization()
-	m.VisitingTeam.LoadOrganization()
+	// Formatting runs after all data is loaded; use Background context since
+	// organizations will already be cached and no new HTTP calls are expected.
+	ctx := context.Background()
+	m.HomeTeam.LoadOrganization(ctx)
+	m.VisitingTeam.LoadOrganization(ctx)
 
 	var firstTeam, secondTeam *Team
 	if m.HomeTeam.Organization.Equals(forOrg) {
@@ -57,7 +61,7 @@ func (m *Match) ForOrganization(forOrg *Organization) (date time.Time, first str
 	first = firstTeam.Organization.ShortName() + " " + firstTeam.ShortName()
 	second = cases.Title(language.English).String(strings.ToLower(secondTeam.Organization.Name))
 	if m.Outcome.WinningTeam != nil {
-		m.Outcome.WinningTeam.LoadOrganization()
+		m.Outcome.WinningTeam.LoadOrganization(ctx)
 
 		if m.Outcome.WinningTeam == firstTeam {
 			outcome = fmt.Sprintf("won %d - %d", m.Outcome.WinnerPoints, m.Outcome.LoserPoints)

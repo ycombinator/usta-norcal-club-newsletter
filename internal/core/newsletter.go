@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -25,14 +26,14 @@ func (n Newsletter) Organization() *usta.Organization {
 	return n.org
 }
 
-func (n *Newsletter) Generate() error {
-	org, err := usta.LoadOrganization(n.orgID)
+func (n *Newsletter) Generate(ctx context.Context) error {
+	org, err := usta.LoadOrganization(ctx, n.orgID)
 	if err != nil {
 		return err
 	}
 	n.org = org
 
-	if _, err = n.org.LoadTeams(); err != nil {
+	if _, err = n.org.LoadTeams(ctx); err != nil {
 		return err
 	}
 
@@ -46,7 +47,7 @@ func (n *Newsletter) Generate() error {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
-				t, err := usta.LoadTeam(id)
+				t, err := usta.LoadTeam(ctx, id)
 				if err != nil {
 					mu.Lock()
 					errs = append(errs, err)
@@ -59,6 +60,9 @@ func (n *Newsletter) Generate() error {
 			}(id)
 		}
 		wg.Wait()
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		if len(errs) > 0 {
 			return fmt.Errorf("failed to load %d extra team(s)", len(errs))
 		}
@@ -72,7 +76,7 @@ func (n *Newsletter) Generate() error {
 		wg.Add(1)
 		go func(t *usta.Team) {
 			defer wg.Done()
-			if _, err := t.LoadMatches(); err != nil {
+			if _, err := t.LoadMatches(ctx); err != nil {
 				mu.Lock()
 				errs = append(errs, err)
 				mu.Unlock()
@@ -81,6 +85,9 @@ func (n *Newsletter) Generate() error {
 	}
 
 	wg.Wait()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if len(errs) > 0 {
 		return fmt.Errorf("failed to load matches for %d team(s)", len(errs))
 	}

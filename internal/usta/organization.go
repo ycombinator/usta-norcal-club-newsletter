@@ -1,7 +1,9 @@
 package usta
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"sync"
@@ -31,7 +33,7 @@ type Organization struct {
 }
 
 // LoadOrganization loads the organization details for the given organization ID.
-func LoadOrganization(id int) (*Organization, error) {
+func LoadOrganization(ctx context.Context, id int) (*Organization, error) {
 	cacheKey := fmt.Sprintf("org:%d", id)
 
 	// Use singleflight to deduplicate concurrent requests
@@ -41,7 +43,11 @@ func LoadOrganization(id int) (*Organization, error) {
 			return cached.(*Organization), nil
 		}
 
-		res, err := httpClient.Get(fmt.Sprintf(organizationURL, id))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(organizationURL, id), nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create organization request")
+		}
+		res, err := httpClient.Do(req)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not fetch organization page")
 		}
@@ -74,7 +80,7 @@ func LoadOrganization(id int) (*Organization, error) {
 }
 
 // LoadTeams loads teams for an organization.
-func (o *Organization) LoadTeams() (*Organization, error) {
+func (o *Organization) LoadTeams(ctx context.Context) (*Organization, error) {
 	var teamIDs []int
 
 	o.doc.Find("a").Each(func(i int, sel *goquery.Selection) {
@@ -99,7 +105,7 @@ func (o *Organization) LoadTeams() (*Organization, error) {
 		wg.Add(1)
 		go func(teamID int) {
 			defer wg.Done()
-			t, err := LoadTeam(teamID)
+			t, err := LoadTeam(ctx, teamID)
 			if err != nil {
 				return
 			}

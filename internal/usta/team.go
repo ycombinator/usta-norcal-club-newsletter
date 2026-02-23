@@ -1,7 +1,9 @@
 package usta
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -32,7 +34,7 @@ type Team struct {
 }
 
 // LoadTeam loads a team's information for the given team ID.
-func LoadTeam(id int) (*Team, error) {
+func LoadTeam(ctx context.Context, id int) (*Team, error) {
 	cacheKey := fmt.Sprintf("team:%d", id)
 
 	// Use singleflight to deduplicate concurrent requests
@@ -42,7 +44,11 @@ func LoadTeam(id int) (*Team, error) {
 			return cached.(*Team), nil
 		}
 
-		res, err := httpClient.Get(fmt.Sprintf(teamURL, id))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(teamURL, id), nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not create team request")
+		}
+		res, err := httpClient.Do(req)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not fetch team page")
 		}
@@ -76,7 +82,7 @@ func LoadTeam(id int) (*Team, error) {
 }
 
 // LoadOrganization loads the organization for a team.
-func (t *Team) LoadOrganization() (*Team, error) {
+func (t *Team) LoadOrganization(ctx context.Context) (*Team, error) {
 	if t.Organization != nil {
 		return t, nil
 	}
@@ -109,7 +115,7 @@ func (t *Team) LoadOrganization() (*Team, error) {
 		}
 	})
 
-	o, err := LoadOrganization(orgID)
+	o, err := LoadOrganization(ctx, orgID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load organization for team ID = %d", t.ID)
 	}
@@ -119,7 +125,7 @@ func (t *Team) LoadOrganization() (*Team, error) {
 }
 
 // LoadMatches loads the matches for a team.
-func (t *Team) LoadMatches() (*Team, error) {
+func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 	if t.Matches != nil {
 		return t, nil
 	}
@@ -215,7 +221,7 @@ func (t *Team) LoadMatches() (*Team, error) {
 
 	for idx, teamID := range opposingTeamIDs {
 		go func(idx, teamID int) {
-			team, err := LoadTeam(teamID)
+			team, err := LoadTeam(ctx, teamID)
 			teamChan <- teamResult{team: team, err: err, idx: idx}
 		}(idx, teamID)
 	}

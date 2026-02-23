@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal"
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
@@ -70,12 +73,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	n, err := core.NewNewsletter(c.OrganizationID, c.TeamIDs)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	if err := n.Generate(); err != nil {
+	if err := n.Generate(ctx); err != nil {
 		fmt.Println(err)
 		return
 	}
