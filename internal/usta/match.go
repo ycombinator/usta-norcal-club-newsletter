@@ -45,8 +45,12 @@ func (m *Match) ForOrganization(forOrg *Organization) (date time.Time, first str
 	m.HomeTeam.LoadOrganization(ctx)
 	m.VisitingTeam.LoadOrganization(ctx)
 
+	isOurs := func(t *Team) bool {
+		return t.Organization.Equals(forOrg) || t.Extra
+	}
+
 	var firstTeam, secondTeam *Team
-	if m.HomeTeam.Organization.Equals(forOrg) {
+	if isOurs(m.HomeTeam) {
 		firstTeam = m.HomeTeam
 		secondTeam = m.VisitingTeam
 		locator = "vs."

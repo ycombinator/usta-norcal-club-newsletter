@@ -54,7 +54,7 @@ func (n *Newsletter) Generate(ctx context.Context) error {
 					mu.Unlock()
 					return
 				}
-				t.ForceHome = true
+				t.Extra = true
 				mu.Lock()
 				extraTeams = append(extraTeams, t)
 				mu.Unlock()
