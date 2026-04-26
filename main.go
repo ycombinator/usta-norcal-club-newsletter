@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -31,7 +32,10 @@ Examples:
   usta-norcal-club-newsletter -org=300                Specify a different organization
   usta-norcal-club-newsletter -teams=123,456          Track additional teams by ID
   usta-norcal-club-newsletter -format=pdf             Generate PDF newsletter
+  usta-norcal-club-newsletter -format=jpeg            Generate JPEG newsletter images
+  usta-norcal-club-newsletter -format=html            Generate HTML newsletter files
   usta-norcal-club-newsletter -past=7 -future=14      Show 7 days back and 14 days ahead
+  usta-norcal-club-newsletter -outdir=./output        Write files to ./output
   usta-norcal-club-newsletter help                    Show this help message
 `)
 }
@@ -39,12 +43,20 @@ Examples:
 func main() {
 	c := internal.DefaultConfig()
 
+	now := time.Now()
+	defaultOutDir := filepath.Join(
+		os.Getenv("HOME"), "Documents", "ASRC",
+		now.Format("2006"),
+		now.Format("20060102"),
+	)
+
 	flag.Usage = usage
 	orgID := flag.Int("org", c.OrganizationID, "USTA NorCal organization ID")
 	teams := flag.String("teams", "", "comma-separated list of additional team IDs to track")
-	format := flag.String("format", "console", "output format: console or pdf")
+	format := flag.String("format", "jpeg", "output format: console, pdf, jpeg, or html")
 	pastDays := flag.Int("past", int(c.PastDuration.Hours()/24), "number of days back to include past match results")
 	futureDays := flag.Int("future", int(c.FutureDuration.Hours()/24), "number of days ahead to include upcoming matches")
+	outDir := flag.String("outdir", defaultOutDir, "output directory for file-based formatters")
 
 	// Handle "help" sub-command before flag.Parse
 	if len(os.Args) > 1 && os.Args[1] == "help" {
@@ -74,8 +86,12 @@ func main() {
 		c.Formatter = formatters.NewConsoleFormatter()
 	case "pdf":
 		c.Formatter = formatters.NewPDFFormatter()
+	case "jpeg":
+		c.Formatter = formatters.NewJPEGFormatter()
+	case "html":
+		c.Formatter = formatters.NewHTMLFormatter()
 	default:
-		fmt.Fprintf(os.Stderr, "unknown format: %s (use 'console' or 'pdf')\n", *format)
+		fmt.Fprintf(os.Stderr, "unknown format: %s (use 'console', 'pdf', 'jpeg', or 'html')\n", *format)
 		os.Exit(1)
 	}
 
@@ -96,6 +112,7 @@ func main() {
 		OrganizationID: c.OrganizationID,
 		PastDuration:   c.PastDuration,
 		FutureDuration: c.FutureDuration,
+		OutputDir:      *outDir,
 	}
 	if err := c.Formatter.Format(n, fmtCfg); err != nil {
 		fmt.Println(err)

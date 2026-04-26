@@ -8,4 +8,6 @@ type Config struct {
 
 	PastDuration   time.Duration
 	FutureDuration time.Duration
+
+	OutputDir string
 }

@@ -23,8 +23,8 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		OrganizationID: asrcOrganizationID,
-		PastDuration:   10 * 24 * time.Hour,
-		FutureDuration: 10 * 24 * time.Hour,
-		Formatter: formatters.NewConsoleFormatter(),
+		PastDuration:   7 * 24 * time.Hour,
+		FutureDuration: 7 * 24 * time.Hour,
+		Formatter: formatters.NewJPEGFormatter(),
 	}
 }
