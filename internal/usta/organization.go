@@ -120,7 +120,7 @@ func (o *Organization) LoadTeams(ctx context.Context) (*Organization, error) {
 }
 
 func (o *Organization) ShortName() string {
-	parts := strings.Split(strings.TrimSpace(o.Name), " ")
+	parts := strings.Fields(o.Name)
 
 	var shortName string
 	for _, part := range parts {
