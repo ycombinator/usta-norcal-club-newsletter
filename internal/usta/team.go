@@ -29,6 +29,7 @@ type Team struct {
 	Organization *Organization `json:"organization"`
 	Name         string        `json:"name"`
 	Matches      []Match       `json:"matches"`
+	ForceHome    bool          `json:"forceHome,omitempty"`
 
 	doc *goquery.Document
 }
@@ -244,7 +245,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		}
 
 		var homeTeam, visitingTeam *Team
-		if md.location == "Home" {
+		if t.ForceHome || md.location == "Home" {
 			homeTeam = t
 			visitingTeam = o
 		} else {
