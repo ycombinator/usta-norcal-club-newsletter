@@ -2,7 +2,7 @@ package usta
 
 import (
 	"regexp"
-	"strconv"
+	"strings"
 )
 
 type Gender int
@@ -21,7 +21,7 @@ type TeamDisplay struct {
 }
 
 var teamNameRegex = regexp.MustCompile(
-	`(?i)Adult\s+(\d+)(?:\s*\+|\s+&\s+Over)\s+(Womens|Women'?s|Mens|Men'?s|Mixed)\s+(\d+\.?\d*)(\s+&\s+Over)?`,
+	`(?i)Adult\s+(\d+)(?:\s*\+|\s+&\s+Over)\s+(Womens|Women'?s|Mens|Men'?s|Mixed)\s+(\d+\.?\d*)(\s*\+|\s+&\s+Over)?`,
 )
 
 func (t *Team) Display() TeamDisplay {
@@ -29,8 +29,6 @@ func (t *Team) Display() TeamDisplay {
 	if matches == nil {
 		return TeamDisplay{}
 	}
-
-	age, _ := strconv.Atoi(matches[1])
 
 	var gender Gender
 	switch {
@@ -50,7 +48,7 @@ func (t *Team) Display() TeamDisplay {
 	return TeamDisplay{
 		Gender:  gender,
 		Level:   level,
-		Daytime: age >= 40,
+		Daytime: strings.Contains(strings.ToLower(t.Name), "daytime"),
 	}
 }
 
