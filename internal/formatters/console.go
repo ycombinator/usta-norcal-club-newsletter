@@ -50,8 +50,11 @@ func (c *ConsoleFormatter) Format(n *core.Newsletter, cfg Config) error {
 		str.WriteString("Upcoming matches:\n")
 		table := tablewriter.NewWriter(&str)
 		table.SetAutoWrapText(false)
-		for _, m := range data.FutureMatches {
+		for i, m := range data.FutureMatches {
 			_, first, _, locOpponent := formatFutureMatch(m, data.Org, data.OrgNames, c.reader, c.writer)
+			if loc, ok := data.LocationOverrides[i]; ok {
+				locOpponent += fmt.Sprintf(" (at %s)", loc)
+			}
 			date := m.Date.Format("Mon, Jan 02 03:04 PM")
 			table.Append([]string{
 				date,

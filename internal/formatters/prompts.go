@@ -73,6 +73,44 @@ func PromptNoOutcomeMatches(reader io.Reader, writer io.Writer, matches []Annota
 	}
 }
 
+func PromptExtraTeamLocations(reader io.Reader, writer io.Writer, matches []usta.Match, org *usta.Organization, names *OrgNames) map[int]string {
+	scanner := bufio.NewScanner(reader)
+	locations := make(map[int]string)
+	defaultLoc := org.ShortName()
+
+	for i, m := range matches {
+		ctx := context.Background()
+		m.HomeTeam.LoadOrganization(ctx)
+
+		if !m.HomeTeam.Extra {
+			continue
+		}
+
+		m.VisitingTeam.LoadOrganization(ctx)
+		ourTeam := m.HomeTeam
+		opponent := m.VisitingTeam
+		d := ourTeam.Display()
+		opName := opponentDisplayName(names, reader, writer, opponent.Organization)
+
+		fmt.Fprintf(writer, "%s: %s%s vs %s (home) — Location [%s]: ",
+			m.Date.Format("Mon 1/2"),
+			d.GenderEmoji(), d.Level,
+			opName,
+			defaultLoc,
+		)
+
+		if !scanner.Scan() {
+			return locations
+		}
+		input := strings.TrimSpace(scanner.Text())
+		if input != "" && input != defaultLoc {
+			locations[i] = input
+		}
+	}
+
+	return locations
+}
+
 func PromptPlayoffMatches(reader io.Reader, writer io.Writer, matches []AnnotatedMatch, org *usta.Organization, names *OrgNames) {
 	if len(matches) == 0 {
 		return

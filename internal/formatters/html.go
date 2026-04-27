@@ -42,7 +42,7 @@ func (f *HTMLFormatter) Format(n *core.Newsletter, cfg Config) error {
 	}
 
 	if len(data.FutureMatches) > 0 {
-		upcoming := BuildUpcomingMatchesData(data.Org, data.FutureMatches, data.OrgNames, f.reader, f.writer)
+		upcoming := BuildUpcomingMatchesData(data.Org, data.FutureMatches, data.OrgNames, data.LocationOverrides, f.reader, f.writer)
 		html, err := RenderUpcomingMatchesHTML(upcoming)
 		if err != nil {
 			return fmt.Errorf("rendering upcoming matches HTML: %w", err)

@@ -14,10 +14,11 @@ import (
 )
 
 type PreparedData struct {
-	Org           *usta.Organization
-	PastMatches   []AnnotatedMatch
-	FutureMatches []usta.Match
-	OrgNames      *OrgNames
+	Org               *usta.Organization
+	PastMatches       []AnnotatedMatch
+	FutureMatches     []usta.Match
+	OrgNames          *OrgNames
+	LocationOverrides map[int]string
 }
 
 func Prepare(n *core.Newsletter, cfg Config, reader io.Reader, writer io.Writer) (*PreparedData, error) {
@@ -39,12 +40,14 @@ func Prepare(n *core.Newsletter, cfg Config, reader io.Reader, writer io.Writer)
 
 	PromptNoOutcomeMatches(reader, writer, annotated, org, names)
 	PromptPlayoffMatches(reader, writer, annotated, org, names)
+	locationOverrides := PromptExtraTeamLocations(reader, writer, futureMatches, org, names)
 
 	return &PreparedData{
-		Org:           org,
-		PastMatches:   annotated,
-		FutureMatches: futureMatches,
-		OrgNames:      names,
+		Org:               org,
+		PastMatches:       annotated,
+		FutureMatches:     futureMatches,
+		OrgNames:          names,
+		LocationOverrides: locationOverrides,
 	}, nil
 }
 

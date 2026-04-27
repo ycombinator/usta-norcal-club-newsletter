@@ -50,6 +50,7 @@ type CalendarDay struct {
 type CalendarMatch struct {
 	Empty        bool
 	LocatorEmoji string
+	FootnoteMark string
 	Time         string
 	GenderEmoji  string
 	Level        string
@@ -161,7 +162,7 @@ func BuildRecentResultsData(org *usta.Organization, matches []AnnotatedMatch, na
 	return data
 }
 
-func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, names *OrgNames, reader io.Reader, writer io.Writer) UpcomingMatchesData {
+func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, names *OrgNames, locationOverrides map[int]string, reader io.Reader, writer io.Writer) UpcomingMatchesData {
 	data := UpcomingMatchesData{
 		OrgShortName: org.ShortName(),
 	}
@@ -193,7 +194,10 @@ func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, name
 	}
 	timedByDay := make([][]timedMatch, 7)
 
-	for _, m := range matches {
+	superscripts := []string{"¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"}
+	footnoteIndex := map[string]int{}
+
+	for i, m := range matches {
 		dayIdx := int(m.Date.Weekday()) - int(time.Monday)
 		if dayIdx < 0 {
 			dayIdx += 7
@@ -213,6 +217,17 @@ func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, name
 			Level:        d.Level,
 			DaytimeEmoji: d.DaytimeEmoji(),
 			OpponentName: opponentDisplayName(names, reader, writer, opponent.Organization),
+		}
+
+		if loc, ok := locationOverrides[i]; ok {
+			idx, exists := footnoteIndex[loc]
+			if !exists {
+				idx = len(data.Footnotes)
+				footnoteIndex[loc] = idx
+				mark := superscripts[idx%len(superscripts)]
+				data.Footnotes = append(data.Footnotes, mark+" at "+loc)
+			}
+			cm.FootnoteMark = superscripts[idx%len(superscripts)]
 		}
 
 		timedByDay[dayIdx] = append(timedByDay[dayIdx], timedMatch{sortKey: m.Date, match: cm})
@@ -410,7 +425,7 @@ const upcomingMatchesHTML = `<!DOCTYPE html>
         {{if not .Empty}}
         <div class="match-entry">
           {{if .Tag}}<span class="tag">{{.Tag}}</span><br>{{end}}
-          {{.LocatorEmoji}} <span class="match-time">{{.Time}}</span><br>
+          {{.LocatorEmoji}}{{.FootnoteMark}} <span class="match-time">{{.Time}}</span><br>
           {{.GenderEmoji}} {{.Level}}{{.DaytimeEmoji}}<br>
           <span class="match-opponent">{{.OpponentName}}</span>
         </div>
@@ -421,7 +436,7 @@ const upcomingMatchesHTML = `<!DOCTYPE html>
     </tr>
     {{end}}
   </table>
-  {{if .Footnotes}}<div class="footnotes">{{range .Footnotes}}<div>* {{.}}</div>{{end}}</div>{{end}}
+  {{if .Footnotes}}<div class="footnotes">{{range .Footnotes}}<div>{{.}}</div>{{end}}</div>{{end}}
 </body>
 </html>`
 
