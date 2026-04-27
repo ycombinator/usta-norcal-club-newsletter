@@ -3,6 +3,7 @@ package usta
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -40,12 +41,14 @@ func LoadTeam(ctx context.Context, id int) (*Team, error) {
 
 	// Use singleflight to deduplicate concurrent requests
 	result, err, _ := teamGroup.Do(cacheKey, func() (interface{}, error) {
-		// Check cache first
 		if cached, ok := teamCache.get(cacheKey); ok {
+			slog.Debug("team cache hit", "team_id", id)
 			return cached.(*Team), nil
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(teamURL, id), nil)
+		u := fmt.Sprintf(teamURL, id)
+		slog.Debug("fetching team page", "team_id", id, "url", u)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create team request")
 		}
@@ -69,7 +72,6 @@ func LoadTeam(ctx context.Context, id int) (*Team, error) {
 
 		t.Name = doc.Find("table tbody tr td b").First().Text()
 
-		// Store in cache
 		teamCache.set(cacheKey, t)
 
 		return t, nil
@@ -128,8 +130,10 @@ func (t *Team) LoadOrganization(ctx context.Context) (*Team, error) {
 // LoadMatches loads the matches for a team.
 func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 	if t.Matches != nil {
+		slog.Debug("matches already loaded", "team_id", t.ID)
 		return t, nil
 	}
+	slog.Debug("parsing matches", "team_id", t.ID, "team_name", t.Name)
 
 	// First pass: collect all match data and opposing team IDs
 	type matchData struct {
@@ -237,7 +241,8 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		opposingTeams[result.idx] = result.team
 	}
 
-	// Third pass: build matches with loaded teams
+	slog.Debug("loaded opposing teams", "team_id", t.ID, "match_count", len(matchDataList))
+
 	for idx, md := range matchDataList {
 		o := opposingTeams[idx]
 		if o == nil {

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
@@ -27,18 +28,22 @@ func (n Newsletter) Organization() *usta.Organization {
 }
 
 func (n *Newsletter) Generate(ctx context.Context) error {
+	slog.Info("loading organization", "org_id", n.orgID)
 	org, err := usta.LoadOrganization(ctx, n.orgID)
 	if err != nil {
 		return err
 	}
 	n.org = org
+	slog.Info("loaded organization", "org_id", n.orgID, "name", org.Name)
 
+	slog.Info("loading teams for organization")
 	if _, err = n.org.LoadTeams(ctx); err != nil {
 		return err
 	}
+	slog.Info("loaded teams", "count", len(n.org.Teams))
 
-	// Load additional teams specified by ID.
 	if len(n.teamIDs) > 0 {
+		slog.Info("loading extra teams", "team_ids", n.teamIDs)
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		var extraTeams []*usta.Team
@@ -68,8 +73,10 @@ func (n *Newsletter) Generate(ctx context.Context) error {
 			return fmt.Errorf("failed to load %d extra team(s)", len(errs))
 		}
 		n.org.Teams = append(n.org.Teams, extraTeams...)
+		slog.Info("loaded extra teams", "count", len(extraTeams))
 	}
 
+	slog.Info("loading matches for all teams", "team_count", len(n.org.Teams))
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var errs []error
@@ -92,5 +99,12 @@ func (n *Newsletter) Generate(ctx context.Context) error {
 	if len(errs) > 0 {
 		return fmt.Errorf("failed to load matches for %d team(s)", len(errs))
 	}
+
+	totalMatches := 0
+	for _, t := range n.org.Teams {
+		totalMatches += len(t.Matches)
+	}
+	slog.Info("loaded all matches", "total_matches", totalMatches)
+
 	return nil
 }

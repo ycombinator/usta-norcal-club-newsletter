@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -95,6 +96,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	slog.Info("starting newsletter generation",
+		"org", c.OrganizationID,
+		"extra_teams", c.TeamIDs,
+		"format", *format,
+		"past_days", *pastDays,
+		"future_days", *futureDays,
+		"outdir", *outDir,
+	)
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -118,4 +128,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	slog.Info("done")
 }

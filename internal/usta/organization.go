@@ -3,6 +3,7 @@ package usta
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -38,12 +39,14 @@ func LoadOrganization(ctx context.Context, id int) (*Organization, error) {
 
 	// Use singleflight to deduplicate concurrent requests
 	result, err, _ := orgGroup.Do(cacheKey, func() (interface{}, error) {
-		// Check cache first
 		if cached, ok := orgCache.get(cacheKey); ok {
+			slog.Debug("organization cache hit", "org_id", id)
 			return cached.(*Organization), nil
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf(organizationURL, id), nil)
+		url := fmt.Sprintf(organizationURL, id)
+		slog.Debug("fetching organization page", "org_id", id, "url", url)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not create organization request")
 		}
@@ -66,7 +69,6 @@ func LoadOrganization(ctx context.Context, id int) (*Organization, error) {
 		o.ID = id
 		o.Name = doc.Find("table tbody tr td font b").First().Text()
 
-		// Store in cache
 		orgCache.set(cacheKey, o)
 
 		return o, nil
@@ -143,15 +145,17 @@ func (o *Organization) Equals(ao *Organization) bool {
 
 func (o *Organization) Matches(past, future time.Duration) (pastMatches []Match, futureMatches []Match) {
 	now := time.Now()
+	tomorrow := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	pastStart := tomorrow.Add(-1 * past)
+	futureEnd := tomorrow.Add(future)
 
-	start := now.Add(-1 * past)
-	end := now.Add(future)
+	slog.Info("match date range", "past_start", pastStart.Format("2006-01-02"), "past_end", tomorrow.Format("2006-01-02"), "future_start", tomorrow.Format("2006-01-02"), "future_end", futureEnd.Format("2006-01-02"))
 
 	for _, t := range o.Teams {
 		for _, m := range t.Matches {
-			if (m.Date.Equal(now) || m.Date.After(now)) && m.Date.Before(end) {
+			if !m.Date.Before(tomorrow) && m.Date.Before(futureEnd) {
 				futureMatches = append(futureMatches, m)
-			} else if m.Date.Before(now) && (m.Date.Equal(start) || m.Date.After(start)) {
+			} else if m.Date.Before(tomorrow) && !m.Date.Before(pastStart) {
 				pastMatches = append(pastMatches, m)
 			}
 		}

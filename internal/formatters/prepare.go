@@ -3,6 +3,7 @@ package formatters
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,16 +23,19 @@ type PreparedData struct {
 func Prepare(n *core.Newsletter, cfg Config, reader io.Reader, writer io.Writer) (*PreparedData, error) {
 	org := n.Organization()
 	pastMatches, futureMatches := org.Matches(cfg.PastDuration, cfg.FutureDuration)
+	slog.Info("filtered matches", "past", len(pastMatches), "future", len(futureMatches))
 
 	annotated := make([]AnnotatedMatch, len(pastMatches))
 	for i, m := range pastMatches {
 		annotated[i] = AnnotatedMatch{Match: m}
 	}
 
+	slog.Info("loading org display names", "file", orgNamesFile)
 	names, err := LoadOrgNames()
 	if err != nil {
 		return nil, fmt.Errorf("loading org names: %w", err)
 	}
+	slog.Info("loaded org display names", "count", len(names.names))
 
 	PromptNoOutcomeMatches(reader, writer, annotated, org, names)
 	PromptPlayoffMatches(reader, writer, annotated, org, names)
