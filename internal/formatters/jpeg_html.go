@@ -177,7 +177,6 @@ func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, name
 	}
 
 	days := make([]CalendarDay, 7)
-	matchesByDay := make([][]CalendarMatch, 7)
 
 	for i := 0; i < 7; i++ {
 		d := monday.AddDate(0, 0, i)
@@ -219,28 +218,43 @@ func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, name
 		timedByDay[dayIdx] = append(timedByDay[dayIdx], timedMatch{sortKey: m.Date, match: cm})
 	}
 
-	maxSlots := 0
+	type dayLayout struct {
+		morning []CalendarMatch
+		evening []CalendarMatch
+	}
+	layouts := make([]dayLayout, 7)
+
 	for i := range timedByDay {
 		sort.Slice(timedByDay[i], func(a, b int) bool {
 			return timedByDay[i][a].sortKey.Before(timedByDay[i][b].sortKey)
 		})
-		matchesByDay[i] = make([]CalendarMatch, len(timedByDay[i]))
-		for j, tm := range timedByDay[i] {
-			matchesByDay[i][j] = tm.match
+		for _, tm := range timedByDay[i] {
+			if tm.sortKey.Hour() >= 16 {
+				layouts[i].evening = append(layouts[i].evening, tm.match)
+			} else {
+				layouts[i].morning = append(layouts[i].morning, tm.match)
+			}
 		}
-		if len(matchesByDay[i]) > maxSlots {
-			maxSlots = len(matchesByDay[i])
+	}
+
+	maxSlots := 0
+	for _, l := range layouts {
+		if n := len(l.morning) + len(l.evening); n > maxSlots {
+			maxSlots = n
 		}
 	}
 
 	for i := range days {
 		days[i].Slots = make([]CalendarMatch, maxSlots)
-		for j := 0; j < maxSlots; j++ {
-			if j < len(matchesByDay[i]) {
-				days[i].Slots[j] = matchesByDay[i][j]
-			} else {
-				days[i].Slots[j] = CalendarMatch{Empty: true}
-			}
+		for j := range days[i].Slots {
+			days[i].Slots[j] = CalendarMatch{Empty: true}
+		}
+		for j, cm := range layouts[i].morning {
+			days[i].Slots[j] = cm
+		}
+		eveningStart := maxSlots - len(layouts[i].evening)
+		for j, cm := range layouts[i].evening {
+			days[i].Slots[eveningStart+j] = cm
 		}
 	}
 
@@ -386,7 +400,7 @@ const upcomingMatchesHTML = `<!DOCTYPE html>
   <div class="subtitle">Upcoming Matches</div>
   <table>
     <tr>
-      {{range .Days}}<th class="{{if .IsWeekend}}weekend{{end}}">{{.DayName}} <sub>{{.Date}}</sub></th>{{end}}
+      {{range .Days}}<th class="{{if .IsWeekend}}weekend{{end}}">{{.DayName}}<br>{{.Date}}</th>{{end}}
     </tr>
     {{range $slot := Slots .MaxSlots}}
     <tr>
