@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
 )
@@ -130,8 +131,21 @@ func PromptExtraTeamLocations(reader io.Reader, writer io.Writer, matches []usta
 	return locations
 }
 
+func matchWasPlayed(m AnnotatedMatch) bool {
+	now := time.Now()
+	endOfToday := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	return m.Match.Date.Before(endOfToday)
+}
+
 func PromptPlayoffMatches(reader io.Reader, writer io.Writer, matches []AnnotatedMatch, org *usta.Organization, names *OrgNames) {
-	if len(matches) == 0 {
+	hasPlayed := false
+	for _, m := range matches {
+		if matchWasPlayed(m) {
+			hasPlayed = true
+			break
+		}
+	}
+	if !hasPlayed {
 		return
 	}
 
@@ -153,6 +167,10 @@ func PromptPlayoffMatches(reader io.Reader, writer io.Writer, matches []Annotate
 	}
 
 	for i := range matches {
+		if !matchWasPlayed(matches[i]) {
+			continue
+		}
+
 		desc := describeMatch(matches[i].Match, org, names, reader, writer)
 
 		for {

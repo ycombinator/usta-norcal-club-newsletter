@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
@@ -209,4 +210,33 @@ func TestPromptPlayoffMatches_Empty(t *testing.T) {
 	PromptPlayoffMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
 
 	require.Empty(t, output.String())
+}
+
+func makeFutureMatch() AnnotatedMatch {
+	m := makeWinMatch()
+	m.Match.Date = time.Now().AddDate(0, 0, 1)
+	return m
+}
+
+func TestPromptPlayoffMatches_SkipsFutureMatches(t *testing.T) {
+	matches := []AnnotatedMatch{makeFutureMatch()}
+	input := strings.NewReader("")
+	output := &bytes.Buffer{}
+
+	PromptPlayoffMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
+
+	require.Empty(t, output.String())
+	require.Equal(t, RegularSeason, matches[0].Annotation.MatchType)
+}
+
+func TestPromptPlayoffMatches_OnlyPromptsPastMatches(t *testing.T) {
+	matches := []AnnotatedMatch{makeFutureMatch(), makeWinMatch(), makeFutureMatch()}
+	input := strings.NewReader("y\np\n")
+	output := &bytes.Buffer{}
+
+	PromptPlayoffMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
+
+	require.Equal(t, RegularSeason, matches[0].Annotation.MatchType)
+	require.Equal(t, Playoff, matches[1].Annotation.MatchType)
+	require.Equal(t, RegularSeason, matches[2].Annotation.MatchType)
 }
