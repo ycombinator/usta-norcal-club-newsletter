@@ -1,6 +1,9 @@
 package formatters
 
-import "time"
+import (
+	"io"
+	"time"
+)
 
 // Config holds the formatter configuration.
 type Config struct {
@@ -10,4 +13,7 @@ type Config struct {
 	FutureDuration time.Duration
 
 	OutputDir string
+
+	Reader io.Reader
+	Writer io.Writer
 }

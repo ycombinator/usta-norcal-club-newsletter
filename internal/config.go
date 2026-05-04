@@ -16,15 +16,18 @@ type Config struct {
 	PastDuration   time.Duration
 	FutureDuration time.Duration
 
-	Formatter formatters.Formatter
+	RecentFormatter   formatters.RecentFormatter
+	UpcomingFormatter formatters.UpcomingFormatter
 }
 
 // DefaultConfig returns the default application configuration.
 func DefaultConfig() Config {
+	f := formatters.NewJPEGFormatter()
 	return Config{
-		OrganizationID: asrcOrganizationID,
-		PastDuration:   7 * 24 * time.Hour,
-		FutureDuration: 7 * 24 * time.Hour,
-		Formatter: formatters.NewJPEGFormatter(),
+		OrganizationID:    asrcOrganizationID,
+		PastDuration:      7 * 24 * time.Hour,
+		FutureDuration:    7 * 24 * time.Hour,
+		RecentFormatter:   f,
+		UpcomingFormatter: f,
 	}
 }

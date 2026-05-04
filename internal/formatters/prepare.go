@@ -2,7 +2,6 @@ package formatters
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -21,7 +20,7 @@ type PreparedData struct {
 	LocationOverrides map[int]string
 }
 
-func Prepare(n *core.Newsletter, cfg Config, reader io.Reader, writer io.Writer) (*PreparedData, error) {
+func Prepare(n *core.Newsletter, cfg Config) (*PreparedData, error) {
 	org := n.Organization()
 	pastMatches, futureMatches := org.Matches(cfg.PastDuration, cfg.FutureDuration)
 	slog.Info("filtered matches", "past", len(pastMatches), "future", len(futureMatches))
@@ -38,9 +37,9 @@ func Prepare(n *core.Newsletter, cfg Config, reader io.Reader, writer io.Writer)
 	}
 	slog.Info("loaded org display names", "count", len(names.names))
 
-	PromptNoOutcomeMatches(reader, writer, annotated, org, names)
-	PromptPlayoffMatches(reader, writer, annotated, org, names)
-	locationOverrides := PromptExtraTeamLocations(reader, writer, futureMatches, org, names)
+	PromptNoOutcomeMatches(cfg.Reader, cfg.Writer, annotated, org, names)
+	PromptPlayoffMatches(cfg.Reader, cfg.Writer, annotated, org, names)
+	locationOverrides := PromptExtraTeamLocations(cfg.Reader, cfg.Writer, futureMatches, org, names)
 
 	return &PreparedData{
 		Org:               org,

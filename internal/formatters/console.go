@@ -4,71 +4,69 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
 )
 
-type ConsoleFormatter struct {
-	reader io.Reader
-	writer io.Writer
-}
+type ConsoleFormatter struct{}
 
 func NewConsoleFormatter() *ConsoleFormatter {
-	return &ConsoleFormatter{reader: os.Stdin, writer: os.Stdout}
+	return &ConsoleFormatter{}
 }
 
-func (c *ConsoleFormatter) Format(n *core.Newsletter, cfg Config) error {
-	data, err := Prepare(n, cfg, c.reader, c.writer)
-	if err != nil {
-		return err
+func (c *ConsoleFormatter) FormatRecent(data *PreparedData, cfg Config) error {
+	if len(data.PastMatches) == 0 {
+		return nil
 	}
 
 	var str strings.Builder
+	str.WriteString("Recent matches:\n")
+	table := tablewriter.NewWriter(&str)
+	table.SetAutoWrapText(false)
+	for _, am := range data.PastMatches {
+		date, first, outcome, locOpponent := formatAnnotatedMatch(am, data.Org, data.OrgNames, cfg.Reader, cfg.Writer)
+		table.Append([]string{
+			date,
+			first,
+			outcome,
+			locOpponent,
+		})
+	}
+	table.Render()
+	str.WriteString("\n")
 
-	if len(data.PastMatches) > 0 {
-		str.WriteString("Recent matches:\n")
-		table := tablewriter.NewWriter(&str)
-		table.SetAutoWrapText(false)
-		for _, am := range data.PastMatches {
-			date, first, outcome, locOpponent := formatAnnotatedMatch(am, data.Org, data.OrgNames, c.reader, c.writer)
-			table.Append([]string{
-				date,
-				first,
-				outcome,
-				locOpponent,
-			})
-		}
-		table.Render()
-		str.WriteString("\n")
+	fmt.Fprint(cfg.Writer, str.String())
+	return nil
+}
+
+func (c *ConsoleFormatter) FormatUpcoming(data *PreparedData, cfg Config) error {
+	if len(data.FutureMatches) == 0 {
+		return nil
 	}
 
-	if len(data.FutureMatches) > 0 {
-		str.WriteString("Upcoming matches:\n")
-		table := tablewriter.NewWriter(&str)
-		table.SetAutoWrapText(false)
-		for i, m := range data.FutureMatches {
-			_, first, _, locOpponent := formatFutureMatch(m, data.Org, data.OrgNames, c.reader, c.writer)
-			if loc, ok := data.LocationOverrides[i]; ok {
-				locOpponent += fmt.Sprintf(" (at %s)", loc)
-			}
-			date := m.Date.Format("Mon, Jan 02 03:04 PM")
-			table.Append([]string{
-				date,
-				first,
-				locOpponent,
-			})
+	var str strings.Builder
+	str.WriteString("Upcoming matches:\n")
+	table := tablewriter.NewWriter(&str)
+	table.SetAutoWrapText(false)
+	for i, m := range data.FutureMatches {
+		_, first, _, locOpponent := formatFutureMatch(m, data.Org, data.OrgNames, cfg.Reader, cfg.Writer)
+		if loc, ok := data.LocationOverrides[i]; ok {
+			locOpponent += fmt.Sprintf(" (at %s)", loc)
 		}
-		table.Render()
-		str.WriteString("\n")
+		date := m.Date.Format("Mon, Jan 02 03:04 PM")
+		table.Append([]string{
+			date,
+			first,
+			locOpponent,
+		})
 	}
+	table.Render()
+	str.WriteString("\n")
 
-	fmt.Fprint(c.writer, str.String())
-
-	return data.Save()
+	fmt.Fprint(cfg.Writer, str.String())
+	return nil
 }
 
 func formatAnnotatedMatch(am AnnotatedMatch, org *usta.Organization, names *OrgNames, reader io.Reader, writer io.Writer) (date, first, outcome, locOpponent string) {

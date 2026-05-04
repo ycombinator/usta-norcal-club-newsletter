@@ -29,16 +29,45 @@ Flags:
 	flag.PrintDefaults()
 	fmt.Fprintf(os.Stderr, `
 Examples:
-  usta-norcal-club-newsletter                         Use default org (ASRC), console output
-  usta-norcal-club-newsletter -org=300                Specify a different organization
-  usta-norcal-club-newsletter -teams=123,456          Track additional teams by ID
-  usta-norcal-club-newsletter -format=pdf             Generate PDF newsletter
-  usta-norcal-club-newsletter -format=jpeg            Generate JPEG newsletter images
-  usta-norcal-club-newsletter -format=html            Generate HTML newsletter files
-  usta-norcal-club-newsletter -past=7 -future=14      Show 7 days back and 14 days ahead
-  usta-norcal-club-newsletter -outdir=./output        Write files to ./output
-  usta-norcal-club-newsletter help                    Show this help message
+  usta-norcal-club-newsletter                                        Use defaults (ASRC, jpeg)
+  usta-norcal-club-newsletter -org=300                               Specify a different organization
+  usta-norcal-club-newsletter -teams=123,456                         Track additional teams by ID
+  usta-norcal-club-newsletter -format=console                        Console output for both sections
+  usta-norcal-club-newsletter -recent-format=jpeg -upcoming-format=console
+  usta-norcal-club-newsletter -past=7 -future=14                     Show 7 days back and 14 days ahead
+  usta-norcal-club-newsletter -outdir=./output                       Write files to ./output
+  usta-norcal-club-newsletter help                                   Show this help message
 `)
+}
+
+func makeRecentFormatter(name string) (formatters.RecentFormatter, error) {
+	switch name {
+	case "console":
+		return formatters.NewConsoleFormatter(), nil
+	case "pdf":
+		return formatters.NewPDFFormatter(), nil
+	case "jpeg":
+		return formatters.NewJPEGFormatter(), nil
+	case "html":
+		return formatters.NewHTMLFormatter(), nil
+	default:
+		return nil, fmt.Errorf("unknown recent format: %s (use 'console', 'pdf', 'jpeg', or 'html')", name)
+	}
+}
+
+func makeUpcomingFormatter(name string) (formatters.UpcomingFormatter, error) {
+	switch name {
+	case "console":
+		return formatters.NewConsoleFormatter(), nil
+	case "pdf":
+		return formatters.NewPDFFormatter(), nil
+	case "jpeg":
+		return formatters.NewJPEGFormatter(), nil
+	case "html":
+		return formatters.NewHTMLFormatter(), nil
+	default:
+		return nil, fmt.Errorf("unknown upcoming format: %s (use 'console', 'pdf', 'jpeg', or 'html')", name)
+	}
 }
 
 func main() {
@@ -54,7 +83,9 @@ func main() {
 	flag.Usage = usage
 	orgID := flag.Int("org", c.OrganizationID, "USTA NorCal organization ID")
 	teams := flag.String("teams", "", "comma-separated list of additional team IDs to track")
-	format := flag.String("format", "jpeg", "output format: console, pdf, jpeg, or html")
+	format := flag.String("format", "jpeg", "output format for both sections: console, pdf, jpeg, or html")
+	recentFormat := flag.String("recent-format", "", "output format for recent results (overrides -format)")
+	upcomingFormat := flag.String("upcoming-format", "", "output format for upcoming matches (overrides -format)")
 	pastDays := flag.Int("past", int(c.PastDuration.Hours()/24), "number of days back to include past match results")
 	futureDays := flag.Int("future", int(c.FutureDuration.Hours()/24), "number of days ahead to include upcoming matches")
 	outDir := flag.String("outdir", defaultOutDir, "output directory for file-based formatters")
@@ -82,24 +113,32 @@ func main() {
 		}
 	}
 
-	switch *format {
-	case "console":
-		c.Formatter = formatters.NewConsoleFormatter()
-	case "pdf":
-		c.Formatter = formatters.NewPDFFormatter()
-	case "jpeg":
-		c.Formatter = formatters.NewJPEGFormatter()
-	case "html":
-		c.Formatter = formatters.NewHTMLFormatter()
-	default:
-		fmt.Fprintf(os.Stderr, "unknown format: %s (use 'console', 'pdf', 'jpeg', or 'html')\n", *format)
+	effectiveRecent := *format
+	effectiveUpcoming := *format
+	if *recentFormat != "" {
+		effectiveRecent = *recentFormat
+	}
+	if *upcomingFormat != "" {
+		effectiveUpcoming = *upcomingFormat
+	}
+
+	var err error
+	c.RecentFormatter, err = makeRecentFormatter(effectiveRecent)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	c.UpcomingFormatter, err = makeUpcomingFormatter(effectiveUpcoming)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	slog.Info("starting newsletter generation",
 		"org", c.OrganizationID,
 		"extra_teams", c.TeamIDs,
-		"format", *format,
+		"recent_format", effectiveRecent,
+		"upcoming_format", effectiveUpcoming,
 		"past_days", *pastDays,
 		"future_days", *futureDays,
 		"outdir", *outDir,
@@ -123,8 +162,27 @@ func main() {
 		PastDuration:   c.PastDuration,
 		FutureDuration: c.FutureDuration,
 		OutputDir:      *outDir,
+		Reader:         os.Stdin,
+		Writer:         os.Stdout,
 	}
-	if err := c.Formatter.Format(n, fmtCfg); err != nil {
+
+	data, err := formatters.Prepare(n, fmtCfg)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err := c.RecentFormatter.FormatRecent(data, fmtCfg); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err := c.UpcomingFormatter.FormatUpcoming(data, fmtCfg); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err := data.Save(); err != nil {
 		fmt.Println(err)
 		return
 	}

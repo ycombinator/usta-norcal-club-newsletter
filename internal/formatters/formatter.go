@@ -1,9 +1,9 @@
 package formatters
 
-import (
-	"github.com/ycombinator/usta-norcal-club-newsletter/internal/core"
-)
+type RecentFormatter interface {
+	FormatRecent(data *PreparedData, cfg Config) error
+}
 
-type Formatter interface {
-	Format(n *core.Newsletter, cfg Config) error
+type UpcomingFormatter interface {
+	FormatUpcoming(data *PreparedData, cfg Config) error
 }
