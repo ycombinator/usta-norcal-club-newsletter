@@ -92,6 +92,60 @@ func TestPromptNoOutcomeMatches_ExplanationOnly(t *testing.T) {
 	require.Equal(t, "match cancelled", matches[0].Annotation.Footnote)
 }
 
+func TestPromptNoOutcomeMatches_Won(t *testing.T) {
+	matches := []AnnotatedMatch{makeNoOutcomeMatch()}
+	input := strings.NewReader("won 3-2\n")
+	output := &bytes.Buffer{}
+
+	PromptNoOutcomeMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
+
+	require.False(t, matches[0].Annotation.RainedOut)
+	require.Empty(t, matches[0].Annotation.Score)
+	require.Empty(t, matches[0].Annotation.Footnote)
+	require.Equal(t, matches[0].Match.HomeTeam, matches[0].Match.Outcome.WinningTeam)
+	require.Equal(t, 3, matches[0].Match.Outcome.WinnerPoints)
+	require.Equal(t, 2, matches[0].Match.Outcome.LoserPoints)
+}
+
+func TestPromptNoOutcomeMatches_Lost(t *testing.T) {
+	matches := []AnnotatedMatch{makeNoOutcomeMatch()}
+	input := strings.NewReader("lost 1-4\n")
+	output := &bytes.Buffer{}
+
+	PromptNoOutcomeMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
+
+	require.False(t, matches[0].Annotation.RainedOut)
+	require.Empty(t, matches[0].Annotation.Score)
+	require.Empty(t, matches[0].Annotation.Footnote)
+	require.Equal(t, matches[0].Match.VisitingTeam, matches[0].Match.Outcome.WinningTeam)
+	require.Equal(t, 4, matches[0].Match.Outcome.WinnerPoints)
+	require.Equal(t, 1, matches[0].Match.Outcome.LoserPoints)
+}
+
+func TestPromptNoOutcomeMatches_WonShorthand(t *testing.T) {
+	matches := []AnnotatedMatch{makeNoOutcomeMatch()}
+	input := strings.NewReader("W 3-2\n")
+	output := &bytes.Buffer{}
+
+	PromptNoOutcomeMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
+
+	require.Equal(t, matches[0].Match.HomeTeam, matches[0].Match.Outcome.WinningTeam)
+	require.Equal(t, 3, matches[0].Match.Outcome.WinnerPoints)
+	require.Equal(t, 2, matches[0].Match.Outcome.LoserPoints)
+}
+
+func TestPromptNoOutcomeMatches_LostShorthand(t *testing.T) {
+	matches := []AnnotatedMatch{makeNoOutcomeMatch()}
+	input := strings.NewReader("l 2-3\n")
+	output := &bytes.Buffer{}
+
+	PromptNoOutcomeMatches(input, output, matches, makeTestOrg(), makeTestOrgNames())
+
+	require.Equal(t, matches[0].Match.VisitingTeam, matches[0].Match.Outcome.WinningTeam)
+	require.Equal(t, 3, matches[0].Match.Outcome.WinnerPoints)
+	require.Equal(t, 2, matches[0].Match.Outcome.LoserPoints)
+}
+
 func TestPromptNoOutcomeMatches_InvalidThenValid(t *testing.T) {
 	matches := []AnnotatedMatch{makeNoOutcomeMatch()}
 	input := strings.NewReader("\n2-1\nR\n")

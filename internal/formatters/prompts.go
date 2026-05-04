@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/ycombinator/usta-norcal-club-newsletter/internal/usta"
 )
 
 var scoreExplanationRegex = regexp.MustCompile(`^(\d+-\d+)\s+(.+)$`)
+var wonLostRegex = regexp.MustCompile(`(?i)^(won|lost|w|l)\s+(\d+)-(\d+)$`)
 
 func describeMatch(m usta.Match, org *usta.Organization, names *OrgNames, reader io.Reader, writer io.Writer) string {
 	ourTeam, opponent, isHome := resolveTeams(m, org)
@@ -54,6 +56,23 @@ func PromptNoOutcomeMatches(reader io.Reader, writer io.Writer, matches []Annota
 
 			if strings.EqualFold(input, "r") {
 				matches[i].Annotation.RainedOut = true
+				break
+			}
+
+			if m := wonLostRegex.FindStringSubmatch(input); m != nil {
+				ourTeam, opponent, _ := resolveTeams(matches[i].Match, org)
+				x, _ := strconv.Atoi(m[2])
+				y, _ := strconv.Atoi(m[3])
+				switch strings.ToLower(m[1]) {
+				case "won", "w":
+					matches[i].Match.Outcome.WinningTeam = ourTeam
+					matches[i].Match.Outcome.WinnerPoints = x
+					matches[i].Match.Outcome.LoserPoints = y
+				case "lost", "l":
+					matches[i].Match.Outcome.WinningTeam = opponent
+					matches[i].Match.Outcome.WinnerPoints = y
+					matches[i].Match.Outcome.LoserPoints = x
+				}
 				break
 			}
 
