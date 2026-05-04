@@ -12,6 +12,7 @@ import (
 
 // Match represents a match consisting of multiple lines.
 type Match struct {
+	Number       int
 	Date         time.Time
 	HomeTeam     *Team
 	VisitingTeam *Team

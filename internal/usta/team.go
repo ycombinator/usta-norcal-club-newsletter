@@ -137,6 +137,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 
 	// First pass: collect all match data and opposing team IDs
 	type matchData struct {
+		matchNumber  int
 		date         time.Time
 		teamID       int
 		location     string
@@ -158,12 +159,16 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 			return
 		}
 
-		// Parse match date
 		cells := sel.Find("td")
 		if cells.Length() < 2 {
 			return
 		}
 
+		// Parse match number from column 1 (e.g., "2 (4/13-4/19) Full RR#1" → 2)
+		matchNumText := strings.TrimSpace(cells.Get(1).FirstChild.Data)
+		matchNum, _ := strconv.Atoi(strings.Fields(matchNumText)[0])
+
+		// Parse match date
 		c := cells.Get(2).FirstChild
 		if c.NextSibling != nil {
 			c = c.NextSibling.FirstChild
@@ -205,6 +210,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		}
 
 		matchDataList = append(matchDataList, matchData{
+			matchNumber:  matchNum,
 			date:         dt,
 			teamID:       teamID,
 			location:     location,
@@ -259,6 +265,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		}
 
 		m := Match{
+			Number:       md.matchNumber,
 			Date:         md.date,
 			HomeTeam:     homeTeam,
 			VisitingTeam: visitingTeam,

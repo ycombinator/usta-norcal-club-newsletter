@@ -34,6 +34,7 @@ Examples:
   usta-norcal-club-newsletter -teams=123,456                         Track additional teams by ID
   usta-norcal-club-newsletter -format=console                        Console output for both sections
   usta-norcal-club-newsletter -recent-format=jpeg -upcoming-format=console
+  usta-norcal-club-newsletter -upcoming-format=gcal -gcal-credentials=creds.json -gcal-calendar="USTA Tennis"
   usta-norcal-club-newsletter -past=7 -future=14                     Show 7 days back and 14 days ahead
   usta-norcal-club-newsletter -outdir=./output                       Write files to ./output
   usta-norcal-club-newsletter help                                   Show this help message
@@ -55,7 +56,7 @@ func makeRecentFormatter(name string) (formatters.RecentFormatter, error) {
 	}
 }
 
-func makeUpcomingFormatter(name string) (formatters.UpcomingFormatter, error) {
+func makeUpcomingFormatter(name, gcalCredentials, gcalCalendar string) (formatters.UpcomingFormatter, error) {
 	switch name {
 	case "console":
 		return formatters.NewConsoleFormatter(), nil
@@ -65,8 +66,19 @@ func makeUpcomingFormatter(name string) (formatters.UpcomingFormatter, error) {
 		return formatters.NewJPEGFormatter(), nil
 	case "html":
 		return formatters.NewHTMLFormatter(), nil
+	case "gcal":
+		if gcalCredentials == "" {
+			return nil, fmt.Errorf("-gcal-credentials is required when upcoming format is 'gcal'")
+		}
+		if gcalCalendar == "" {
+			return nil, fmt.Errorf("-gcal-calendar is required when upcoming format is 'gcal'")
+		}
+		return &formatters.GCalFormatter{
+			CredentialsFile: gcalCredentials,
+			CalendarName:    gcalCalendar,
+		}, nil
 	default:
-		return nil, fmt.Errorf("unknown upcoming format: %s (use 'console', 'pdf', 'jpeg', or 'html')", name)
+		return nil, fmt.Errorf("unknown upcoming format: %s (use 'console', 'pdf', 'jpeg', 'html', or 'gcal')", name)
 	}
 }
 
@@ -89,6 +101,8 @@ func main() {
 	pastDays := flag.Int("past", int(c.PastDuration.Hours()/24), "number of days back to include past match results")
 	futureDays := flag.Int("future", int(c.FutureDuration.Hours()/24), "number of days ahead to include upcoming matches")
 	outDir := flag.String("outdir", defaultOutDir, "output directory for file-based formatters")
+	gcalCredentials := flag.String("gcal-credentials", "", "path to Google OAuth2 client credentials JSON (required for gcal format)")
+	gcalCalendar := flag.String("gcal-calendar", "", "Google Calendar name for upcoming match events (required for gcal format)")
 
 	// Handle "help" sub-command before flag.Parse
 	if len(os.Args) > 1 && os.Args[1] == "help" {
@@ -113,6 +127,15 @@ func main() {
 		}
 	}
 
+	if *format == "gcal" {
+		fmt.Fprintln(os.Stderr, "'gcal' format is only valid for -upcoming-format, not -format")
+		os.Exit(1)
+	}
+	if *recentFormat == "gcal" {
+		fmt.Fprintln(os.Stderr, "'gcal' format is only valid for -upcoming-format, not -recent-format")
+		os.Exit(1)
+	}
+
 	effectiveRecent := *format
 	effectiveUpcoming := *format
 	if *recentFormat != "" {
@@ -128,7 +151,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	c.UpcomingFormatter, err = makeUpcomingFormatter(effectiveUpcoming)
+	c.UpcomingFormatter, err = makeUpcomingFormatter(effectiveUpcoming, *gcalCredentials, *gcalCalendar)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

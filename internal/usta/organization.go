@@ -26,9 +26,10 @@ var shortNameTranslations = map[string]string{
 
 // Organization represents a USTA NorCal organization.
 type Organization struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
-	Teams []*Team `json:"teams"`
+	ID      int     `json:"id"`
+	Name    string  `json:"name"`
+	Address string  `json:"address,omitempty"`
+	Teams   []*Team `json:"teams"`
 
 	doc *goquery.Document
 }
@@ -137,6 +138,28 @@ func (o *Organization) ShortName() string {
 	}
 
 	return shortName
+}
+
+func (o *Organization) LoadAddress() {
+	if o.Address != "" {
+		return
+	}
+
+	var lines []string
+	o.doc.Find("a").Each(func(i int, sel *goquery.Selection) {
+		href, exists := sel.Attr("href")
+		if !exists {
+			return
+		}
+		if strings.Contains(href, "maps.google.com") {
+			text := strings.TrimSpace(sel.Text())
+			if text != "" {
+				lines = append(lines, text)
+			}
+		}
+	})
+
+	o.Address = strings.Join(lines, ", ")
 }
 
 func (o *Organization) Equals(ao *Organization) bool {
