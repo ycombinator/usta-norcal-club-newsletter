@@ -11,6 +11,7 @@ type Config struct {
 
 	PastDuration   time.Duration
 	FutureDuration time.Duration
+	BoundaryDate   time.Time
 
 	OutputDir string
 

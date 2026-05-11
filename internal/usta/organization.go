@@ -166,19 +166,21 @@ func (o *Organization) Equals(ao *Organization) bool {
 	return o.ID == ao.ID
 }
 
-func (o *Organization) Matches(past, future time.Duration) (pastMatches []Match, futureMatches []Match) {
-	now := time.Now()
-	tomorrow := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
-	pastStart := tomorrow.Add(-1 * past)
-	futureEnd := tomorrow.Add(future)
+func (o *Organization) Matches(past, future time.Duration, boundary time.Time) (pastMatches []Match, futureMatches []Match) {
+	if boundary.IsZero() {
+		now := time.Now()
+		boundary = time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	}
+	pastStart := boundary.Add(-1 * past)
+	futureEnd := boundary.Add(future)
 
-	slog.Info("match date range", "past_start", pastStart.Format("2006-01-02"), "past_end", tomorrow.Format("2006-01-02"), "future_start", tomorrow.Format("2006-01-02"), "future_end", futureEnd.Format("2006-01-02"))
+	slog.Info("match date range", "past_start", pastStart.Format("2006-01-02"), "boundary", boundary.Format("2006-01-02"), "future_end", futureEnd.Format("2006-01-02"))
 
 	for _, t := range o.Teams {
 		for _, m := range t.Matches {
-			if !m.Date.Before(tomorrow) && m.Date.Before(futureEnd) {
+			if !m.Date.Before(boundary) && m.Date.Before(futureEnd) {
 				futureMatches = append(futureMatches, m)
-			} else if m.Date.Before(tomorrow) && !m.Date.Before(pastStart) {
+			} else if m.Date.Before(boundary) && !m.Date.Before(pastStart) {
 				pastMatches = append(pastMatches, m)
 			}
 		}

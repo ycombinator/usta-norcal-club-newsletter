@@ -22,7 +22,7 @@ type PreparedData struct {
 
 func Prepare(n *core.Newsletter, cfg Config) (*PreparedData, error) {
 	org := n.Organization()
-	pastMatches, futureMatches := org.Matches(cfg.PastDuration, cfg.FutureDuration)
+	pastMatches, futureMatches := org.Matches(cfg.PastDuration, cfg.FutureDuration, cfg.BoundaryDate)
 	slog.Info("filtered matches", "past", len(pastMatches), "future", len(futureMatches))
 
 	annotated := make([]AnnotatedMatch, len(pastMatches))

@@ -85,13 +85,6 @@ func makeUpcomingFormatter(name, gcalCredentials, gcalCalendar string) (formatte
 func main() {
 	c := internal.DefaultConfig()
 
-	now := time.Now()
-	defaultOutDir := filepath.Join(
-		os.Getenv("HOME"), "Documents", "ASRC",
-		now.Format("2006"),
-		now.Format("20060102"),
-	)
-
 	flag.Usage = usage
 	orgID := flag.Int("org", c.OrganizationID, "USTA NorCal organization ID")
 	teams := flag.String("teams", "", "comma-separated list of additional team IDs to track")
@@ -100,7 +93,8 @@ func main() {
 	upcomingFormat := flag.String("upcoming-format", "", "output format for upcoming matches (overrides -format)")
 	pastDays := flag.Int("past", int(c.PastDuration.Hours()/24), "number of days back to include past match results")
 	futureDays := flag.Int("future", int(c.FutureDuration.Hours()/24), "number of days ahead to include upcoming matches")
-	outDir := flag.String("outdir", defaultOutDir, "output directory for file-based formatters")
+	outDir := flag.String("outdir", "", "output directory for file-based formatters")
+	boundaryDate := flag.String("boundary-date", "", "date (YYYY-MM-DD) dividing recent and upcoming matches (default: tomorrow)")
 	gcalCredentials := flag.String("gcal-credentials", "", "path to Google OAuth2 client credentials JSON (required for gcal format)")
 	gcalCalendar := flag.String("gcal-calendar", "", "Google Calendar name for upcoming match events (required for gcal format)")
 
@@ -115,6 +109,28 @@ func main() {
 	c.OrganizationID = *orgID
 	c.PastDuration = time.Duration(*pastDays) * 24 * time.Hour
 	c.FutureDuration = time.Duration(*futureDays) * 24 * time.Hour
+
+	var parsedBoundary time.Time
+	if *boundaryDate != "" {
+		var err error
+		parsedBoundary, err = time.ParseInLocation("2006-01-02", *boundaryDate, time.Now().Location())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid boundary-date %q: expected YYYY-MM-DD\n", *boundaryDate)
+			os.Exit(1)
+		}
+	}
+
+	if *outDir == "" {
+		dirDate := time.Now()
+		if !parsedBoundary.IsZero() {
+			dirDate = parsedBoundary
+		}
+		*outDir = filepath.Join(
+			os.Getenv("HOME"), "Documents", "ASRC",
+			dirDate.Format("2006"),
+			dirDate.Format("20060102"),
+		)
+	}
 
 	if *teams != "" {
 		for _, s := range strings.Split(*teams, ",") {
@@ -184,6 +200,7 @@ func main() {
 		OrganizationID: c.OrganizationID,
 		PastDuration:   c.PastDuration,
 		FutureDuration: c.FutureDuration,
+		BoundaryDate:   parsedBoundary,
 		OutputDir:      *outDir,
 		Reader:         os.Stdin,
 		Writer:         os.Stdout,
