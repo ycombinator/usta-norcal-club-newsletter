@@ -186,15 +186,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	n, err := core.NewNewsletter(c.OrganizationID, c.TeamIDs)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	if err := n.Generate(ctx); err != nil {
-		fmt.Println(err)
-		return
-	}
+	dataFilePath := filepath.Join(*outDir, "data.json")
 
 	fmtCfg := formatters.Config{
 		OrganizationID: c.OrganizationID,
@@ -202,8 +194,25 @@ func main() {
 		FutureDuration: c.FutureDuration,
 		BoundaryDate:   parsedBoundary,
 		OutputDir:      *outDir,
+		DataFilePath:   dataFilePath,
 		Reader:         os.Stdin,
 		Writer:         os.Stdout,
+	}
+
+	n, err := core.NewNewsletter(c.OrganizationID, c.TeamIDs)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if _, statErr := os.Stat(dataFilePath); statErr != nil {
+		// No data file found — fetch live from USTA.
+		if err := n.Generate(ctx); err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
+		slog.Info("data file found, will load instead of fetching from USTA", "path", dataFilePath)
 	}
 
 	data, err := formatters.Prepare(n, fmtCfg)

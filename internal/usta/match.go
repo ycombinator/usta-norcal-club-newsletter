@@ -14,6 +14,7 @@ import (
 type Match struct {
 	Number       int
 	Date         time.Time
+	HasTime      bool
 	HomeTeam     *Team
 	VisitingTeam *Team
 	Location     *Organization

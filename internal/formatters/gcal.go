@@ -19,6 +19,12 @@ type GCalFormatter struct {
 }
 
 func (g *GCalFormatter) FormatUpcoming(data *PreparedData, cfg Config) error {
+	if data.DataFile != nil {
+		slog.Warn("gcal formatter requires live USTA data; skipping because a data file was loaded")
+		fmt.Fprintln(cfg.Writer, "Note: Google Calendar update skipped — delete data.json and re-run to sync from live USTA data")
+		return nil
+	}
+
 	ctx := context.Background()
 
 	svc, err := newCalendarService(ctx, g.CredentialsFile, cfg.Reader, cfg.Writer)
@@ -68,10 +74,11 @@ func upsertEvent(ctx context.Context, svc *calendar.Service, calID string, m ust
 
 	opponentName := data.OrgNames.Resolve(cfg.Reader, cfg.Writer, opponent.Organization.Name)
 
-	title := fmt.Sprintf("%s %s%s%s %s %s",
+	title := fmt.Sprintf("%s %s%s%s%s %s %s",
 		locationEmoji(isHome),
 		d.GenderEmoji(),
 		d.Level,
+		suffixForTeam(data.Org, ourTeam),
 		d.DaytimeEmoji(),
 		locatorWord(isHome),
 		opponentName,

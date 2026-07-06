@@ -13,14 +13,12 @@ func NewJPEGFormatter() *JPEGFormatter {
 }
 
 func (f *JPEGFormatter) FormatRecent(data *PreparedData, cfg Config) error {
-	if len(data.PastMatches) == 0 {
+	if !data.hasPastMatches() {
 		return nil
 	}
 
-	orgName := data.Org.ShortName()
-
-	slog.Info("rendering recent results", "matches", len(data.PastMatches))
-	recent := BuildRecentResultsData(data.Org, data.PastMatches, data.OrgNames, cfg.Reader, cfg.Writer)
+	recent := data.buildRecentDisplay(cfg)
+	slog.Info("rendering recent results", "rows", len(recent.Rows))
 	html, err := RenderRecentResultsHTML(recent)
 	if err != nil {
 		return fmt.Errorf("rendering recent results HTML: %w", err)
@@ -30,7 +28,7 @@ func (f *JPEGFormatter) FormatRecent(data *PreparedData, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("rendering recent results JPEG: %w", err)
 	}
-	path, err := OutputPath(cfg.OutputDir, OutputFilename(orgName, "recent", "jpg"))
+	path, err := OutputPath(cfg.OutputDir, OutputFilename(data.orgShortName(), "recent", "jpg"))
 	if err != nil {
 		return err
 	}
@@ -44,14 +42,12 @@ func (f *JPEGFormatter) FormatRecent(data *PreparedData, cfg Config) error {
 }
 
 func (f *JPEGFormatter) FormatUpcoming(data *PreparedData, cfg Config) error {
-	if len(data.FutureMatches) == 0 {
+	if !data.hasUpcomingMatches() {
 		return nil
 	}
 
-	orgName := data.Org.ShortName()
-
-	slog.Info("rendering upcoming matches", "matches", len(data.FutureMatches))
-	upcoming := BuildUpcomingMatchesData(data.Org, data.FutureMatches, data.OrgNames, data.LocationOverrides, cfg.Reader, cfg.Writer)
+	upcoming := data.buildUpcomingDisplay(cfg)
+	slog.Info("rendering upcoming matches", "days", len(upcoming.Days))
 	html, err := RenderUpcomingMatchesHTML(upcoming)
 	if err != nil {
 		return fmt.Errorf("rendering upcoming matches HTML: %w", err)
@@ -61,7 +57,7 @@ func (f *JPEGFormatter) FormatUpcoming(data *PreparedData, cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("rendering upcoming matches JPEG: %w", err)
 	}
-	path, err := OutputPath(cfg.OutputDir, OutputFilename(orgName, "upcoming", "jpg"))
+	path, err := OutputPath(cfg.OutputDir, OutputFilename(data.orgShortName(), "upcoming", "jpg"))
 	if err != nil {
 		return err
 	}

@@ -168,8 +168,10 @@ func (o *Organization) Equals(ao *Organization) bool {
 
 func (o *Organization) Matches(past, future time.Duration, boundary time.Time) (pastMatches []Match, futureMatches []Match) {
 	if boundary.IsZero() {
-		now := time.Now()
-		boundary = time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+		now := time.Now().In(tz)
+		boundary = time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, tz)
+	} else {
+		boundary = time.Date(boundary.Year(), boundary.Month(), boundary.Day(), 0, 0, 0, 0, tz)
 	}
 	pastStart := boundary.Add(-1 * past)
 	futureEnd := boundary.Add(future)
@@ -178,6 +180,9 @@ func (o *Organization) Matches(past, future time.Duration, boundary time.Time) (
 
 	for _, t := range o.Teams {
 		for _, m := range t.Matches {
+			if !m.HasTime {
+				continue
+			}
 			if !m.Date.Before(boundary) && m.Date.Before(futureEnd) {
 				futureMatches = append(futureMatches, m)
 			} else if m.Date.Before(boundary) && !m.Date.Before(pastStart) {

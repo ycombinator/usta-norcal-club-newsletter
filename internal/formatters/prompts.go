@@ -28,9 +28,9 @@ func describeMatch(m usta.Match, org *usta.Organization, names *OrgNames, reader
 		locator = "@"
 	}
 
-	return fmt.Sprintf("%s: %s%s %s %s",
+	return fmt.Sprintf("%s: %s%s%s %s %s",
 		m.Date.Format("Mon 1/2"),
-		d.GenderEmoji(), d.Level,
+		d.GenderEmoji(), d.Level, suffixForTeam(org, ourTeam),
 		locator,
 		opName,
 	)
@@ -112,9 +112,9 @@ func PromptExtraTeamLocations(reader io.Reader, writer io.Writer, matches []usta
 		d := ourTeam.Display()
 		opName := opponentDisplayName(names, reader, writer, opponent.Organization)
 
-		fmt.Fprintf(writer, "%s: %s%s vs %s (home) — Location [%s]: ",
+		fmt.Fprintf(writer, "%s: %s%s%s vs %s (home) — Location [%s]: ",
 			m.Date.Format("Mon 1/2"),
-			d.GenderEmoji(), d.Level,
+			d.GenderEmoji(), d.Level, suffixForTeam(org, ourTeam),
 			opName,
 			defaultLoc,
 		)

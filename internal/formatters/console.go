@@ -17,7 +17,7 @@ func NewConsoleFormatter() *ConsoleFormatter {
 }
 
 func (c *ConsoleFormatter) FormatRecent(data *PreparedData, cfg Config) error {
-	if len(data.PastMatches) == 0 {
+	if !data.hasPastMatches() {
 		return nil
 	}
 
@@ -25,24 +25,31 @@ func (c *ConsoleFormatter) FormatRecent(data *PreparedData, cfg Config) error {
 	str.WriteString("Recent matches:\n")
 	table := tablewriter.NewWriter(&str)
 	table.SetAutoWrapText(false)
-	for _, am := range data.PastMatches {
-		date, first, outcome, locOpponent := formatAnnotatedMatch(am, data.Org, data.OrgNames, cfg.Reader, cfg.Writer)
-		table.Append([]string{
-			date,
-			first,
-			outcome,
-			locOpponent,
-		})
+
+	if data.DataFile != nil {
+		for _, rec := range data.DataFile.PastMatches {
+			table.Append([]string{
+				dataFileDateDisplay(rec.Date),
+				data.DataFile.OrgShortName + " " + rec.GenderEmoji + rec.Level + rec.Superscript,
+				consoleOutcome(rec),
+				consoleLocOpponent(rec.IsHome, rec.Opponent),
+			})
+		}
+	} else {
+		for _, am := range data.PastMatches {
+			date, first, outcome, locOpponent := formatAnnotatedMatch(am, data.Org, data.OrgNames, cfg.Reader, cfg.Writer)
+			table.Append([]string{date, first, outcome, locOpponent})
+		}
 	}
+
 	table.Render()
 	str.WriteString("\n")
-
 	fmt.Fprint(cfg.Writer, str.String())
 	return nil
 }
 
 func (c *ConsoleFormatter) FormatUpcoming(data *PreparedData, cfg Config) error {
-	if len(data.FutureMatches) == 0 {
+	if !data.hasUpcomingMatches() {
 		return nil
 	}
 
@@ -50,23 +57,65 @@ func (c *ConsoleFormatter) FormatUpcoming(data *PreparedData, cfg Config) error 
 	str.WriteString("Upcoming matches:\n")
 	table := tablewriter.NewWriter(&str)
 	table.SetAutoWrapText(false)
-	for i, m := range data.FutureMatches {
-		_, first, _, locOpponent := formatFutureMatch(m, data.Org, data.OrgNames, cfg.Reader, cfg.Writer)
-		if loc, ok := data.LocationOverrides[i]; ok {
-			locOpponent += fmt.Sprintf(" (at %s)", loc)
+
+	if data.DataFile != nil {
+		for _, rec := range data.DataFile.FutureMatches {
+			date := dataFileDateDisplay(rec.Date)
+			if rec.Time != "" {
+				date += " " + dataFileMatchTime(rec.Time)
+			}
+			locOpponent := consoleLocOpponent(rec.IsHome, rec.Opponent)
+			if rec.LocationNote != "" {
+				locOpponent += fmt.Sprintf(" (at %s)", rec.LocationNote)
+			}
+			table.Append([]string{
+				date,
+				data.DataFile.OrgShortName + " " + rec.GenderEmoji + rec.Level + rec.Superscript,
+				locOpponent,
+			})
 		}
-		date := m.Date.Format("Mon, Jan 02 03:04 PM")
-		table.Append([]string{
-			date,
-			first,
-			locOpponent,
-		})
+	} else {
+		for i, m := range data.FutureMatches {
+			_, first, _, locOpponent := formatFutureMatch(m, data.Org, data.OrgNames, cfg.Reader, cfg.Writer)
+			if loc, ok := data.LocationOverrides[i]; ok {
+				locOpponent += fmt.Sprintf(" (at %s)", loc)
+			}
+			date := m.Date.Format("Mon, Jan 02 03:04 PM")
+			table.Append([]string{date, first, locOpponent})
+		}
 	}
+
 	table.Render()
 	str.WriteString("\n")
-
 	fmt.Fprint(cfg.Writer, str.String())
 	return nil
+}
+
+func consoleOutcome(rec PastMatchRecord) string {
+	var outcome string
+	if rec.IsRainedOut {
+		outcome = "rained out"
+	} else if rec.IsIncomplete && rec.OutcomeText != "" {
+		outcome = rec.OutcomeText + "*"
+	} else if rec.IsIncomplete {
+		outcome = "*"
+	} else {
+		outcome = rec.OutcomeText
+	}
+	switch rec.MatchType {
+	case "playoff":
+		outcome += " [playoff]"
+	case "sectionals":
+		outcome += " [Sectionals]"
+	}
+	return outcome
+}
+
+func consoleLocOpponent(isHome bool, opponent string) string {
+	if isHome {
+		return "vs. " + opponent
+	}
+	return "@ " + opponent
 }
 
 func formatAnnotatedMatch(am AnnotatedMatch, org *usta.Organization, names *OrgNames, reader io.Reader, writer io.Writer) (date, first, outcome, locOpponent string) {

@@ -9,8 +9,10 @@ import (
 func TestDisplay(t *testing.T) {
 	tests := map[string]struct {
 		name        string
+		code        string
 		gender      Gender
 		level       string
+		teamSuffix  string
 		daytime     bool
 		genderEmoji string
 	}{
@@ -84,6 +86,13 @@ func TestDisplay(t *testing.T) {
 			daytime:     false,
 			genderEmoji: "👭",
 		},
+		"mixed 40 & over (gender first)": {
+			name:        "2026 Mixed 40 & Over 7.0",
+			gender:      GenderMixed,
+			level:       "7.0",
+			daytime:     false,
+			genderEmoji: "👫",
+		},
 		"unknown format": {
 			name:        "Some Random Team Name",
 			gender:      GenderUnknown,
@@ -91,14 +100,69 @@ func TestDisplay(t *testing.T) {
 			daytime:     false,
 			genderEmoji: "",
 		},
+		"mixed 40 & over team A (gender first)": {
+			name:        "2026 Mixed 40 & Over 7.0",
+			code:        "CLUB SR 40MX7.0A",
+			gender:      GenderMixed,
+			level:       "7.0",
+			teamSuffix:  "A",
+			daytime:     false,
+			genderEmoji: "👫",
+		},
+		"mixed 40 & over team B (gender first)": {
+			name:        "2026 Mixed 40 & Over 7.0",
+			code:        "CLUB SR 40MX7.0B",
+			gender:      GenderMixed,
+			level:       "7.0",
+			teamSuffix:  "B",
+			daytime:     false,
+			genderEmoji: "👫",
+		},
+		"18+ mixed team C": {
+			name:        "2026 Adult 18+ Mixed 7.0",
+			code:        "CLUB SR 18MX7.0C",
+			gender:      GenderMixed,
+			level:       "7.0",
+			teamSuffix:  "C",
+			daytime:     false,
+			genderEmoji: "👫",
+		},
+		"daytime team with suffix": {
+			name:        "2026 Adult 18+ Womens 3.5 Daytime",
+			code:        "CLUB SR 18AW3.5A-DT",
+			gender:      GenderWomens,
+			level:       "3.5",
+			teamSuffix:  "A",
+			daytime:     true,
+			genderEmoji: "👭",
+		},
+		"team B with bracketed nickname": {
+			name:        "2026 Mixed 40 & Over 7.0",
+			code:        "CLUB SR 40MX7.0B [Team Bee's]",
+			gender:      GenderMixed,
+			level:       "7.0",
+			teamSuffix:  "B",
+			daytime:     false,
+			genderEmoji: "👫",
+		},
+		"team A with parenthesized nickname": {
+			name:        "2026 Mixed 40 & Over 6.0",
+			code:        "CLUB SR 40MX6.0A (Summer Swingers)",
+			gender:      GenderMixed,
+			level:       "6.0",
+			teamSuffix:  "A",
+			daytime:     false,
+			genderEmoji: "👫",
+		},
 	}
 
 	for label, tc := range tests {
 		t.Run(label, func(t *testing.T) {
-			team := &Team{Name: tc.name}
+			team := &Team{Name: tc.name, Code: tc.code}
 			d := team.Display()
 			require.Equal(t, tc.gender, d.Gender)
 			require.Equal(t, tc.level, d.Level)
+			require.Equal(t, tc.teamSuffix, d.TeamSuffix)
 			require.Equal(t, tc.daytime, d.Daytime)
 			require.Equal(t, tc.genderEmoji, d.GenderEmoji())
 		})

@@ -19,18 +19,19 @@ type RecentResultsData struct {
 }
 
 type ResultRow struct {
-	DayLabel     string
-	IsWeekend    bool
-	GenderEmoji  string
-	Level        string
-	DaytimeEmoji string
-	OutcomeText  string
-	IsWin        bool
-	IsRainedOut  bool
-	IsIncomplete bool
-	LocatorEmoji string
-	OpponentName string
-	Tag          string
+	DayLabel        string
+	IsWeekend       bool
+	GenderEmoji     string
+	Level           string
+	TeamSuperscript template.HTML
+	DaytimeEmoji    string
+	OutcomeText     string
+	IsWin           bool
+	IsRainedOut     bool
+	IsIncomplete    bool
+	LocatorEmoji    string
+	OpponentName    string
+	Tag             string
 }
 
 type UpcomingMatchesData struct {
@@ -48,15 +49,16 @@ type CalendarDay struct {
 }
 
 type CalendarMatch struct {
-	Empty        bool
-	LocatorEmoji string
-	FootnoteMark string
-	Time         string
-	GenderEmoji  string
-	Level        string
-	DaytimeEmoji string
-	OpponentName string
-	Tag          string
+	Empty           bool
+	LocatorEmoji    string
+	FootnoteMark    string
+	Time            string
+	GenderEmoji     string
+	Level           string
+	TeamSuperscript template.HTML
+	DaytimeEmoji    string
+	OpponentName    string
+	Tag             string
 }
 
 func isWeekend(d time.Weekday) bool {
@@ -76,6 +78,31 @@ func resolveTeams(m usta.Match, org *usta.Organization) (ourTeam, opponent *usta
 
 func opponentDisplayName(names *OrgNames, reader io.Reader, writer io.Writer, org *usta.Organization) string {
 	return names.Resolve(reader, writer, org.Name)
+}
+
+func teamSuperscript(suffix string) template.HTML {
+	if suffix == "" {
+		return ""
+	}
+	return template.HTML("<sup>" + suffix + "</sup>")
+}
+
+// suffixForTeam returns the team suffix letter only when another org team
+// shares the same name; otherwise returns "".
+func suffixForTeam(org *usta.Organization, t *usta.Team) string {
+	d := t.Display()
+	if d.TeamSuffix == "" {
+		return ""
+	}
+	for _, ot := range org.Teams {
+		if ot.ID == t.ID {
+			continue
+		}
+		if ot.Name == t.Name {
+			return d.TeamSuffix
+		}
+	}
+	return ""
 }
 
 func locationEmoji(isHome bool) string {
@@ -118,13 +145,14 @@ func BuildRecentResultsData(org *usta.Organization, matches []AnnotatedMatch, na
 		}
 
 		row := ResultRow{
-			GenderEmoji:  d.GenderEmoji(),
-			Level:        d.Level,
-			DaytimeEmoji: d.DaytimeEmoji(),
-			LocatorEmoji: locationEmoji(isHome),
-			OpponentName: opponentDisplayName(names, reader, writer, opponent.Organization),
-			Tag:          matchTypeTag(am.Annotation.MatchType),
-			IsWeekend:    isWeekend(m.Date.Weekday()),
+			GenderEmoji:     d.GenderEmoji(),
+			Level:           d.Level,
+			TeamSuperscript: teamSuperscript(suffixForTeam(org, ourTeam)),
+			DaytimeEmoji:    d.DaytimeEmoji(),
+			LocatorEmoji:    locationEmoji(isHome),
+			OpponentName:    opponentDisplayName(names, reader, writer, opponent.Organization),
+			Tag:             matchTypeTag(am.Annotation.MatchType),
+			IsWeekend:       isWeekend(m.Date.Weekday()),
 		}
 
 		if showLabel {
@@ -211,12 +239,13 @@ func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, name
 		opponent.LoadOrganization(context.Background())
 
 		cm := CalendarMatch{
-			LocatorEmoji: locationEmoji(isHome),
-			Time:         formatMatchTime(m.Date),
-			GenderEmoji:  d.GenderEmoji(),
-			Level:        d.Level,
-			DaytimeEmoji: d.DaytimeEmoji(),
-			OpponentName: opponentDisplayName(names, reader, writer, opponent.Organization),
+			LocatorEmoji:    locationEmoji(isHome),
+			Time:            formatMatchTime(m.Date),
+			GenderEmoji:     d.GenderEmoji(),
+			Level:           d.Level,
+			TeamSuperscript: teamSuperscript(suffixForTeam(org, ourTeam)),
+			DaytimeEmoji:    d.DaytimeEmoji(),
+			OpponentName:    opponentDisplayName(names, reader, writer, opponent.Organization),
 		}
 
 		if loc, ok := locationOverrides[i]; ok {
@@ -346,7 +375,7 @@ const recentResultsHTML = `<!DOCTYPE html>
     {{range .Rows}}
     <tr>
       <td class="day-label {{if .IsWeekend}}weekend{{end}}">{{.DayLabel}}</td>
-      <td class="team-col">{{.GenderEmoji}}{{.Level}}{{.DaytimeEmoji}}</td>
+      <td class="team-col">{{.GenderEmoji}}{{.Level}}{{.TeamSuperscript}}{{.DaytimeEmoji}}</td>
       <td class="outcome {{if .IsRainedOut}}rainedout{{else if .IsWin}}win{{else}}loss{{end}}">{{if .IsRainedOut}}🌧️{{else if .IsIncomplete}}{{.OutcomeText}}*{{else}}{{.OutcomeText}}{{end}}</td>
       <td>{{.LocatorEmoji}}</td>
       <td class="opponent">{{.OpponentName}}</td>
@@ -426,7 +455,7 @@ const upcomingMatchesHTML = `<!DOCTYPE html>
         <div class="match-entry">
           {{if .Tag}}<span class="tag">{{.Tag}}</span><br>{{end}}
           {{.LocatorEmoji}}{{.FootnoteMark}} <span class="match-time">{{.Time}}</span><br>
-          {{.GenderEmoji}} {{.Level}}{{.DaytimeEmoji}}<br>
+          {{.GenderEmoji}} {{.Level}}{{.TeamSuperscript}}{{.DaytimeEmoji}}<br>
           <span class="match-opponent">{{.OpponentName}}</span>
         </div>
         {{end}}

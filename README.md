@@ -28,11 +28,17 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
    |------|---------|-------------|
    | `-org` | `225` | USTA NorCal organization ID |
    | `-teams` | | Comma-separated list of additional team IDs to track |
-   | `-format` | `console` | Output format: `console` or `pdf` |
+   | `-format` | `jpeg` | Output format for both sections: `console`, `pdf`, `jpeg`, or `html` |
+   | `-recent-format` | | Output format for recent results (overrides `-format`) |
+   | `-upcoming-format` | | Output format for upcoming matches (overrides `-format`); also accepts `gcal` |
+   | `-past` | `7` | Number of days back to include past match results |
+   | `-future` | `14` | Number of days ahead to include upcoming matches |
+   | `-outdir` | | Output directory for file-based formatters (default: `~/Documents/ASRC/YYYY/YYYYMMDD`) |
+   | `-boundary-date` | | Date (YYYY-MM-DD) dividing recent and upcoming matches (default: tomorrow) |
 
    **Examples:**
    ```
-   ./usta-norcal-club-newsletter                         # Default org, console output
+   ./usta-norcal-club-newsletter                         # Default org, JPEG output
    ./usta-norcal-club-newsletter -org=300                # Specify a different organization
    ./usta-norcal-club-newsletter -teams=123,456          # Track additional teams by ID
    ./usta-norcal-club-newsletter -format=pdf             # Generate PDF newsletter
@@ -40,6 +46,67 @@ This project provides a CLI tool to generate a newsletter for a tennis club part
    ```
 
    ![Screenshot showing the organization ID for Almaden Valley Athletic Club](img/avac_id.png)
+
+## Intermediate data files
+
+Every time the tool runs and generates output, it also saves an intermediate data file (`data.json`) in the same output directory as the report images. This file is a human-readable JSON snapshot of everything in the report.
+
+**Example output directory after a run:**
+```
+~/Documents/ASRC/2026/20260628/
+  asrc_usta_2026_06_28_recent.jpg
+  asrc_usta_2026_06_28_upcoming.jpg
+  data.json
+```
+
+### Correcting errors without re-fetching from USTA
+
+If USTA's website has an incorrect date, wrong score, or missing outcome, you can fix it directly in `data.json` and regenerate the report without touching USTA's servers:
+
+1. Open `data.json` in a text editor.
+2. Find the match entry to correct. Each entry looks like:
+   ```json
+   {
+     "date": "2026-06-27",
+     "gender_emoji": "👫",
+     "level": "4.5",
+     "is_home": true,
+     "opponent": "Courtside",
+     "is_win": true,
+     "outcome_text": "won 3-2",
+     "match_type": "playoff"
+   }
+   ```
+3. Edit the field(s) you want to correct — for example, change `"date": "2026-06-27"` to `"date": "2026-06-26"` to move a match to the correct day.
+4. Re-run the tool with the same flags (including `-boundary-date` if you used it). Because `data.json` already exists, the tool loads it instead of fetching from USTA, prompts are skipped, and the report images are regenerated.
+   ```
+   ./usta-norcal-club-newsletter -boundary-date 2026-06-28
+   ```
+
+**Editable fields in `past_matches`:**
+
+| Field | Description |
+|-------|-------------|
+| `date` | Match date in `YYYY-MM-DD` format. Change to fix a wrong date — the match will be sorted and grouped correctly. |
+| `opponent` | Opponent display name. |
+| `is_win` | `true` if we won. |
+| `is_rained_out` | `true` if the match was rained out. |
+| `is_incomplete` | `true` if the match result is not yet final. |
+| `outcome_text` | Score string, e.g. `"won 3-2"` or a partial score like `"2-0"`. |
+| `footnote` | Explanation shown as a footnote, e.g. `"to be completed later"`. |
+| `match_type` | `"regular"`, `"playoff"`, or `"sectionals"`. |
+
+**Editable fields in `future_matches`:**
+
+| Field | Description |
+|-------|-------------|
+| `date` | Match date in `YYYY-MM-DD` format. |
+| `time` | Match time in `HH:MM` 24-hour format, e.g. `"18:00"`. |
+| `opponent` | Opponent display name. |
+| `is_home` | `true` if playing at home. |
+| `location_note` | Alternate venue name shown as a footnote for extra-team matches. |
+
+> **Note:** Google Calendar sync (`-upcoming-format=gcal`) always requires live USTA data and will be skipped if a data file is loaded. Delete `data.json` and re-run to force a fresh fetch and calendar sync.
 
 ## Development
 

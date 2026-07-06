@@ -12,18 +12,16 @@ func NewHTMLFormatter() *HTMLFormatter {
 }
 
 func (f *HTMLFormatter) FormatRecent(data *PreparedData, cfg Config) error {
-	if len(data.PastMatches) == 0 {
+	if !data.hasPastMatches() {
 		return nil
 	}
 
-	orgName := data.Org.ShortName()
-
-	recent := BuildRecentResultsData(data.Org, data.PastMatches, data.OrgNames, cfg.Reader, cfg.Writer)
+	recent := data.buildRecentDisplay(cfg)
 	html, err := RenderRecentResultsHTML(recent)
 	if err != nil {
 		return fmt.Errorf("rendering recent results HTML: %w", err)
 	}
-	path, err := OutputPath(cfg.OutputDir, OutputFilename(orgName, "recent", "html"))
+	path, err := OutputPath(cfg.OutputDir, OutputFilename(data.orgShortName(), "recent", "html"))
 	if err != nil {
 		return err
 	}
@@ -36,18 +34,16 @@ func (f *HTMLFormatter) FormatRecent(data *PreparedData, cfg Config) error {
 }
 
 func (f *HTMLFormatter) FormatUpcoming(data *PreparedData, cfg Config) error {
-	if len(data.FutureMatches) == 0 {
+	if !data.hasUpcomingMatches() {
 		return nil
 	}
 
-	orgName := data.Org.ShortName()
-
-	upcoming := BuildUpcomingMatchesData(data.Org, data.FutureMatches, data.OrgNames, data.LocationOverrides, cfg.Reader, cfg.Writer)
+	upcoming := data.buildUpcomingDisplay(cfg)
 	html, err := RenderUpcomingMatchesHTML(upcoming)
 	if err != nil {
 		return fmt.Errorf("rendering upcoming matches HTML: %w", err)
 	}
-	path, err := OutputPath(cfg.OutputDir, OutputFilename(orgName, "upcoming", "html"))
+	path, err := OutputPath(cfg.OutputDir, OutputFilename(data.orgShortName(), "upcoming", "html"))
 	if err != nil {
 		return err
 	}

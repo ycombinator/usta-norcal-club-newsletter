@@ -29,6 +29,7 @@ type Team struct {
 	ID           int           `json:"id"`
 	Organization *Organization `json:"organization"`
 	Name         string        `json:"name"`
+	Code         string        `json:"code,omitempty"`
 	Matches      []Match       `json:"matches"`
 	Extra        bool          `json:"extra,omitempty"`
 
@@ -71,6 +72,12 @@ func LoadTeam(ctx context.Context, id int) (*Team, error) {
 		t.ID = id
 
 		t.Name = doc.Find("table tbody tr td b").First().Text()
+
+		// The short code (e.g. "ALMADEN SR 40MX7.0A") is the text in the same
+		// cell immediately after the team name <b> element.
+		nameCell := doc.Find("table tbody tr td b").First().Parent()
+		cellText := strings.TrimSpace(nameCell.Text())
+		t.Code = strings.TrimSpace(strings.TrimPrefix(cellText, t.Name))
 
 		teamCache.set(cacheKey, t)
 
@@ -139,6 +146,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 	type matchData struct {
 		matchNumber  int
 		date         time.Time
+		hasTime      bool
 		teamID       int
 		location     string
 		outcomeVerb  string
@@ -188,7 +196,8 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		if err != nil {
 			return
 		}
-		if hour > 0 {
+		hasTime := hour > 0
+		if hasTime {
 			dt = time.Date(dt.Year(), dt.Month(), dt.Day(), hour, minute, 0, 0, dt.Location())
 		}
 
@@ -212,6 +221,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		matchDataList = append(matchDataList, matchData{
 			matchNumber:  matchNum,
 			date:         dt,
+			hasTime:      hasTime,
 			teamID:       teamID,
 			location:     location,
 			outcomeVerb:  verb,
@@ -267,6 +277,7 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		m := Match{
 			Number:       md.matchNumber,
 			Date:         md.date,
+			HasTime:      md.hasTime,
 			HomeTeam:     homeTeam,
 			VisitingTeam: visitingTeam,
 		}
