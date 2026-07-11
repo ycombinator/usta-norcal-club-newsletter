@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -143,11 +144,15 @@ func matchTypeFromString(s string) MatchType {
 	}
 }
 
-// Save writes the DataFile to path as indented JSON.
+// Save writes the DataFile to path as indented JSON, creating the parent
+// directory if it doesn't already exist.
 func (df *DataFile) Save(path string) error {
 	b, err := json.MarshalIndent(df, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshaling data file: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("creating data file directory: %w", err)
 	}
 	return os.WriteFile(path, b, 0644)
 }
