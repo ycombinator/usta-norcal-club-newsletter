@@ -180,12 +180,16 @@ func (o *Organization) Matches(past, future time.Duration, boundary time.Time) (
 
 	for _, t := range o.Teams {
 		for _, m := range t.Matches {
-			if !m.HasTime {
-				continue
-			}
 			if !m.Date.Before(boundary) && m.Date.Before(futureEnd) {
+				// Upcoming matches need a known time to display, so skip
+				// ones where the time couldn't be determined.
+				if !m.HasTime {
+					continue
+				}
 				futureMatches = append(futureMatches, m)
 			} else if m.Date.Before(boundary) && !m.Date.Before(pastStart) {
+				// Past results only need the date and outcome, so include
+				// them even if the match time couldn't be parsed.
 				pastMatches = append(pastMatches, m)
 			}
 		}

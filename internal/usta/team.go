@@ -24,9 +24,13 @@ var (
 	// timeRegex matches the usual "All 3 at 7:30 PM ..." format used for
 	// regular-season and playoff matches.
 	timeRegex = regexp.MustCompile(`at[^\d]+(\d+):(\d\d)\s+([aApP]M)`)
-	// bareTimeRegex matches the 24-hour "HH:MM:SS" format used for Sectional
-	// matches, which don't include an "at" prefix or AM/PM suffix.
+	// bareTimeRegex matches the 24-hour "HH:MM:SS" format used for some
+	// Sectional matches, which don't include an "at" prefix or AM/PM suffix.
 	bareTimeRegex = regexp.MustCompile(`^(\d{1,2}):(\d{2}):\d{2}$`)
+	// bareAMPMTimeRegex matches the 12-hour "H:MMam"/"H:MM am" format used by
+	// other Sectional matches, which omit the "at" prefix and any space
+	// before the AM/PM marker.
+	bareAMPMTimeRegex = regexp.MustCompile(`^(\d{1,2}):(\d\d)\s*([aApP][mM])$`)
 )
 
 // Team represents a USTA NorCal team.
@@ -347,6 +351,9 @@ func parseTime(u string) (int, int, error) {
 	}
 
 	parts := timeRegex.FindStringSubmatch(u)
+	if parts == nil {
+		parts = bareAMPMTimeRegex.FindStringSubmatch(u)
+	}
 	if len(parts) < 4 {
 		return 0, 0, nil
 	}
