@@ -47,6 +47,7 @@ type FutureMatchRecord struct {
 	IsHome       bool   `json:"is_home"`
 	Opponent     string `json:"opponent"`
 	LocationNote string `json:"location_note,omitempty"` // alternate location for away extra-team matches
+	MatchType    string `json:"match_type,omitempty"`    // "regular", "playoff", "sectionals"
 }
 
 // NewDataFile builds a DataFile from a PreparedData populated via live USTA data.
@@ -284,6 +285,7 @@ func (df *DataFile) ToUpcomingMatchesData() UpcomingMatchesData {
 			Level:           rec.Level,
 			TeamSuperscript: teamSuperscript(rec.Superscript),
 			OpponentName:    rec.Opponent,
+			Tag:             matchTypeTag(matchTypeFromString(rec.MatchType)),
 		}
 
 		if rec.LocationNote != "" {

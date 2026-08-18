@@ -453,7 +453,7 @@ const upcomingMatchesHTML = `<!DOCTYPE html>
         {{with index .Slots $slot}}
         {{if not .Empty}}
         <div class="match-entry">
-          {{if .Tag}}<span class="tag">{{.Tag}}</span><br>{{end}}
+          {{if .Tag}}<span class="tag" style="display:block; text-align:center">{{.Tag}}</span>{{end}}
           {{.LocatorEmoji}}{{.FootnoteMark}} <span class="match-time">{{.Time}}</span><br>
           {{.GenderEmoji}} {{.Level}}{{.TeamSuperscript}}{{.DaytimeEmoji}}<br>
           <span class="match-opponent">{{.OpponentName}}</span>
