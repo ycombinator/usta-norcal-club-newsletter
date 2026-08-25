@@ -1,6 +1,7 @@
 package usta
 
 import (
+	"log/slog"
 	"regexp"
 	"strings"
 )
@@ -21,12 +22,23 @@ type TeamDisplay struct {
 	Daytime    bool
 }
 
+// genderWords matches the gender component of a USTA team name. USTA NorCal
+// uses "Mens"/"Womens" (most common), "Men's"/"Women's" (ASCII or smart
+// apostrophe \x{2019}), and occasionally the singular "Men"/"Women".
+const genderWords = `(Womens|Women[\x{2019}']?s?|Mens|Men[\x{2019}']?s?|Mixed)`
+
 var teamNameRegex = regexp.MustCompile(
-	`(?i)Adult\s+(\d+)(?:\s*\+|\s+&\s+Over)\s+(Womens|Women'?s|Mens|Men'?s|Mixed)\s+(\d+\.?\d*)(\s*\+|\s+&\s+Over)?`,
+	`(?i)Adult\s+(\d+)(?:\s*\+|\s+&\s+Over)\s+` + genderWords + `\s+(\d+\.?\d*)(\s*\+|\s+&\s+Over)?`,
 )
 
 var genderFirstRegex = regexp.MustCompile(
-	`(?i)(Womens|Women'?s|Mens|Men'?s|Mixed)\s+\d+(?:\s*\+|\s+&\s+Over)\s+(\d+\.?\d*)(\s*\+|\s+&\s+Over)?`,
+	`(?i)` + genderWords + `\s+\d+(?:\s*\+|\s+&\s+Over)\s+(\d+\.?\d*)(\s*\+|\s+&\s+Over)?`,
+)
+
+// comboRegex matches Combo Doubles league names: "2026 Combo Mens League 6.5"
+// or "2026 Combo Womens Daytime League 5.5". There is no age category.
+var comboRegex = regexp.MustCompile(
+	`(?i)Combo\s+` + genderWords + `\s+(?:Daytime\s+)?League\s+(\d+\.?\d*)`,
 )
 
 // teamCodeSuffixRegex extracts the trailing team letter (A, B, C…) from a short
@@ -51,7 +63,12 @@ func (t *Team) Display() TeamDisplay {
 		genderStr, levelStr, suffixStr = m[2], m[3], m[4]
 	} else if m := genderFirstRegex.FindStringSubmatch(t.Name); m != nil {
 		genderStr, levelStr, suffixStr = m[1], m[2], m[3]
+	} else if m := comboRegex.FindStringSubmatch(t.Name); m != nil {
+		genderStr, levelStr = m[1], m[2]
 	} else {
+		if t.Name != "" {
+			slog.Warn("team name did not match any known format", "team_id", t.ID, "team_name", t.Name)
+		}
 		return TeamDisplay{}
 	}
 
