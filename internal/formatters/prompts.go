@@ -170,6 +170,9 @@ func PromptPlayoffMatches(reader io.Reader, writer io.Writer, matches []Annotate
 		if !matchWasPlayed(matches[i]) {
 			continue
 		}
+		if matches[i].Annotation.MatchType != RegularSeason {
+			continue
+		}
 
 		desc := describeMatch(matches[i].Match, org, names, reader, writer)
 

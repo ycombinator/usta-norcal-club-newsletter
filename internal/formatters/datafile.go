@@ -120,6 +120,7 @@ func buildFutureRecord(m usta.Match, org *usta.Organization, names *OrgNames, lo
 	if m.HasTime {
 		rec.Time = m.Date.Format("15:04")
 	}
+	rec.MatchType = matchTypeToString(matchTypeFromString(m.MatchTypeHint))
 	return rec
 }
 

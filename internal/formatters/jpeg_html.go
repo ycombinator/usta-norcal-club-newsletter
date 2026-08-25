@@ -246,6 +246,7 @@ func BuildUpcomingMatchesData(org *usta.Organization, matches []usta.Match, name
 			TeamSuperscript: teamSuperscript(suffixForTeam(org, ourTeam)),
 			DaytimeEmoji:    d.DaytimeEmoji(),
 			OpponentName:    opponentDisplayName(names, reader, writer, opponent.Organization),
+			Tag:             matchTypeTag(matchTypeFromString(m.MatchTypeHint)),
 		}
 
 		if loc, ok := locationOverrides[i]; ok {

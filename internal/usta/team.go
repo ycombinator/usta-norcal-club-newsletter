@@ -153,14 +153,15 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 
 	// First pass: collect all match data and opposing team IDs
 	type matchData struct {
-		matchNumber  int
-		date         time.Time
-		hasTime      bool
-		teamID       int
-		location     string
-		outcomeVerb  string
-		winnerPoints int
-		loserPoints  int
+		matchNumber   int
+		matchTypeHint string
+		date          time.Time
+		hasTime       bool
+		teamID        int
+		location      string
+		outcomeVerb   string
+		winnerPoints  int
+		loserPoints   int
 	}
 
 	var matchDataList []matchData
@@ -181,9 +182,13 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 			return
 		}
 
-		// Parse match number from column 1 (e.g., "2 (4/13-4/19) Full RR#1" → 2)
+		// Parse match number and type from column 1.
+		// Regular season: "2 (4/13-4/19) Full RR#1" — first field is the round number.
+		// Playoffs: "PlayOff" — no round number.
+		// Sectionals: "Sectionals" — no round number.
 		matchNumText := strings.TrimSpace(cells.Get(1).FirstChild.Data)
 		matchNum, _ := strconv.Atoi(strings.Fields(matchNumText)[0])
+		matchTypeHint := parseMatchTypeHint(matchNumText)
 
 		// Parse match date
 		c := cells.Get(2).FirstChild
@@ -228,14 +233,15 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		}
 
 		matchDataList = append(matchDataList, matchData{
-			matchNumber:  matchNum,
-			date:         dt,
-			hasTime:      hasTime,
-			teamID:       teamID,
-			location:     location,
-			outcomeVerb:  verb,
-			winnerPoints: winnerPoints,
-			loserPoints:  loserPoints,
+			matchNumber:   matchNum,
+			matchTypeHint: matchTypeHint,
+			date:          dt,
+			hasTime:       hasTime,
+			teamID:        teamID,
+			location:      location,
+			outcomeVerb:   verb,
+			winnerPoints:  winnerPoints,
+			loserPoints:   loserPoints,
 		})
 		opposingTeamIDs = append(opposingTeamIDs, teamID)
 	})
@@ -284,11 +290,12 @@ func (t *Team) LoadMatches(ctx context.Context) (*Team, error) {
 		}
 
 		m := Match{
-			Number:       md.matchNumber,
-			Date:         md.date,
-			HasTime:      md.hasTime,
-			HomeTeam:     homeTeam,
-			VisitingTeam: visitingTeam,
+			Number:        md.matchNumber,
+			Date:          md.date,
+			HasTime:       md.hasTime,
+			HomeTeam:      homeTeam,
+			VisitingTeam:  visitingTeam,
+			MatchTypeHint: md.matchTypeHint,
 		}
 
 		if md.outcomeVerb != "" {
@@ -389,6 +396,17 @@ func parseTeamID(u string) (int, error) {
 	}
 
 	return int(teamID), nil
+}
+
+func parseMatchTypeHint(matchNumText string) string {
+	lower := strings.ToLower(matchNumText)
+	if strings.Contains(lower, "playoff") {
+		return "playoff"
+	}
+	if strings.Contains(lower, "sectional") {
+		return "sectionals"
+	}
+	return ""
 }
 
 func parseOutcome(outcome string) (string, int, int, error) {

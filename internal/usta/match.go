@@ -19,6 +19,10 @@ type Match struct {
 	VisitingTeam *Team
 	Location     *Organization
 
+	// MatchTypeHint is parsed from the USTA schedule table: "playoff",
+	// "sectionals", or "" for regular-season matches.
+	MatchTypeHint string
+
 	Outcome struct {
 		WinningTeam  *Team
 		WinnerPoints int

@@ -86,7 +86,10 @@ func Prepare(n *core.Newsletter, cfg Config) (*PreparedData, error) {
 
 	annotated := make([]AnnotatedMatch, len(pastMatches))
 	for i, m := range pastMatches {
-		annotated[i] = AnnotatedMatch{Match: m}
+		annotated[i] = AnnotatedMatch{
+			Match:      m,
+			Annotation: MatchAnnotation{MatchType: matchTypeFromString(m.MatchTypeHint)},
+		}
 	}
 
 	slog.Info("loading org display names", "file", orgNamesFile)
