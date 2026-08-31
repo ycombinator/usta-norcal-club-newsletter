@@ -1,6 +1,26 @@
 ## USTA NorCal Club Newsletter
 
-This project provides a CLI tool to generate a newsletter for a tennis club participating in a USTA Norcal League. The newsletter consists of recent past results and upcoming fixtures.
+This project provides a browser app and CLI tool to generate a newsletter for a tennis club participating in a USTA NorCal League. The newsletter consists of recent past results and upcoming fixtures.
+
+## Web app
+
+The static web app in [`web/`](web/) loads an organization's public schedule through the Net Results API, lets an organizer correct results and fixtures in the browser, and exports JSON, standalone HTML, JPEG, ICS, or a print-ready PDF. Draft data and settings stay in the browser's local storage; the site has no server-side component of its own.
+
+Run it locally with:
+
+```sh
+cd web
+npm install
+npm run dev
+```
+
+The Pages workflow deploys the app at `https://ycombinator.github.io/usta-norcal-club-newsletter/`. Before the first deployment:
+
+1. Enable GitHub Pages with **GitHub Actions** as the source in the repository settings.
+2. Deploy the companion Net Results API change, which provides `GET /organizations/{id}/schedule` and permits the Pages origin on that one public endpoint.
+3. Optionally add a repository Actions variable named `GOOGLE_CLIENT_ID` and register `https://ycombinator.github.io` as an authorized JavaScript origin in Google Cloud to enable direct Calendar sync. Without it, the downloadable `.ics` calendar file remains available.
+
+Use `VITE_NET_RESULTS_API_URL` to point a local or custom build at another API deployment.
 
 ## Installation
 
