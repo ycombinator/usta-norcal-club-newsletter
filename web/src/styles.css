@@ -14,6 +14,7 @@
   --ink: #102d3d;
   --muted: #56717e;
   --shadow: 0 18px 50px rgba(5, 38, 56, 0.13);
+  --board-font: "Comic Sans MS", "Marker Felt", cursive;
 }
 
 * { box-sizing: border-box; }
@@ -179,9 +180,10 @@ input:hover, select:hover { border-color: var(--court-light); }
   border: 6px solid white;
   box-shadow: 0 8px 0 rgba(0, 0, 0, 0.18);
 }
+.publication-card, .publication-card * { font-family: var(--board-font); }
 .publication-heading { margin-bottom: 18px; text-align: center; }
-.publication-heading p { margin: 0 0 4px; font-family: "Comic Sans MS", "Marker Felt", cursive; font-size: clamp(1.1rem, 2vw, 1.55rem); font-weight: 800; }
-.publication-heading h2 { margin: 0; font-family: "Arial Narrow", "Avenir Next Condensed", sans-serif; color: var(--court); font-size: clamp(1.4rem, 3vw, 2.1rem); text-transform: uppercase; }
+.publication-heading p { margin: 0 0 4px; font-size: clamp(1.1rem, 2vw, 1.55rem); font-weight: 800; }
+.publication-heading h2 { margin: 0; color: var(--court); font-size: clamp(1.4rem, 3vw, 2.1rem); text-transform: uppercase; }
 .recent-board table { width: 100%; border-collapse: collapse; }
 .recent-board th, .recent-board td { padding: 7px 10px; font-size: clamp(0.86rem, 1.5vw, 1.16rem); text-align: left; white-space: nowrap; }
 .recent-board th { font-style: italic; }
@@ -197,10 +199,12 @@ input:hover, select:hover { border-color: var(--court-light); }
 .footnote { margin: 10px 0 0; color: var(--muted); font-size: 0.8rem; font-style: italic; text-align: right; }
 .publication-empty { padding: 34px; color: var(--muted); text-align: center; border: 2px dashed var(--line); }
 .week-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr)); border: 1px solid var(--line); }
-.day-column { min-width: 0; border-right: 1px solid var(--line); }
+.day-column { display: flex; min-width: 0; border-right: 1px solid var(--line); flex-direction: column; }
 .day-column:last-child { border-right: 0; }
 .day-column h3 { margin: 0; padding: 10px 5px; color: var(--court); background: var(--sky); font-size: 0.84rem; text-align: center; text-transform: uppercase; }
-.day-matches { min-height: 145px; padding: 6px; }
+.day-matches { display: flex; min-height: 145px; padding: 6px; flex: 1; flex-direction: column; }
+.late-matches:not(:empty) { margin-top: auto; }
+.day-matches .calendar-match:last-child { margin-bottom: 0; }
 .calendar-match { margin-bottom: 7px; padding: 8px; background: white; border-top: 4px solid var(--court-light); box-shadow: 0 2px 6px rgba(5, 38, 56, 0.12); }
 .calendar-match p { margin: 3px 0; font-size: 0.78rem; }
 .calendar-match .match-tag { display: block; margin: -8px -8px 6px; text-align: center; }

@@ -17,6 +17,12 @@ function timeLabel(time?: string): string {
   return minute ? `${hour}:${String(minute).padStart(2, "0")}${period}` : `${hour}${period}`;
 }
 
+export function isLateMatch(time?: string): boolean {
+  if (!time) return false;
+  const [hour] = time.split(":").map(Number);
+  return Number.isFinite(hour) && hour >= 16;
+}
+
 function tag(match: { match_type?: string }): string {
   if (match.match_type === "sectionals") return "Sectionals";
   if (match.match_type === "playoff") return "playoff";
@@ -81,19 +87,24 @@ function WeekBoard({ data, days }: { data: NewsletterData; days: string[] }) {
       <div className="week-grid">
         {days.map((date) => {
           const matches = data.future_matches.filter((match) => match.date === date);
+          const indexedMatches = matches.map((match, index) => ({ match, index }));
+          const daytimeMatches = indexedMatches.filter(({ match }) => !isLateMatch(match.time));
+          const lateMatches = indexedMatches.filter(({ match }) => isLateMatch(match.time));
           const weekend = [0, 6].includes(parseDate(date).getDay());
+          const matchCards = (items: typeof indexedMatches) => items.map(({ match, index }) => (
+            <div className="calendar-match" key={`${date}-${index}`}>
+              {tag(match) && <span className="match-tag">{tag(match)}</span>}
+              <p>{match.is_home ? "🏠" : "🚗"} <strong>{timeLabel(match.time)}</strong></p>
+              <p>{matchTeam(match)}</p>
+              <p className="opponent">{match.opponent}</p>
+            </div>
+          ));
           return (
             <section className="day-column" key={date}>
               <h3 className={weekend ? "weekend" : ""}>{dayLabel(date)}</h3>
               <div className="day-matches">
-                {matches.map((match, index) => (
-                  <div className="calendar-match" key={`${date}-${index}`}>
-                    {tag(match) && <span className="match-tag">{tag(match)}</span>}
-                    <p>{match.is_home ? "🏠" : "🚗"} <strong>{timeLabel(match.time)}</strong></p>
-                    <p>{matchTeam(match)}</p>
-                    <p className="opponent">{match.opponent}</p>
-                  </div>
-                ))}
+                <div className="daytime-matches">{matchCards(daytimeMatches)}</div>
+                <div className="late-matches">{matchCards(lateMatches)}</div>
               </div>
             </section>
           );
