@@ -15,6 +15,7 @@ export interface ScheduleEntry {
 
 export interface OrganizationScheduleTeam {
   id: string;
+  name?: string;
   code: string;
   league: string;
   organization_id?: string;
@@ -42,6 +43,7 @@ export interface PastMatchRecord {
   is_win?: boolean;
   is_rained_out?: boolean;
   is_incomplete?: boolean;
+  review_status?: "needs_review" | "to_be_completed";
   outcome_text?: string;
   footnote?: string;
   match_type?: MatchType;
@@ -71,6 +73,4 @@ export interface Settings {
   boundaryDate: string;
   pastDays: number;
   futureDays: number;
-  apiBaseUrl: string;
-  calendarName: string;
 }

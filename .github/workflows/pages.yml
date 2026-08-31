@@ -37,7 +37,6 @@ jobs:
         working-directory: web
         env:
           VITE_NET_RESULTS_API_URL: https://net-results-api.onrender.com
-          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
         run: npm run build
       - uses: actions/configure-pages@v5
         with:

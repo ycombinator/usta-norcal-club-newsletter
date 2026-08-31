@@ -7,6 +7,15 @@ import type {
   PastMatchRecord,
   ScheduleEntry,
 } from "./types";
+import orgNamesSource from "../../org_names.yaml?raw";
+
+const organizationNames = new Map(
+  orgNamesSource
+    .split(/\r?\n/)
+    .map((line) => line.match(/^([^#][^:]*):\s*(.+?)\s*$/))
+    .filter((match): match is RegExpMatchArray => Boolean(match))
+    .map((match) => [match[1].trim().toUpperCase(), match[2].trim()]),
+);
 
 const opponentPrefixes: Array<[RegExp, string]> = [
   [/^BAY CLUB COURTSIDE\b|^BCC\b/i, "Courtside"],
@@ -18,19 +27,19 @@ const opponentPrefixes: Array<[RegExp, string]> = [
   [/^MORGAN HILL\b/i, "Morgan Hill"],
 ];
 
-export function shortOrganizationName(name: string): string {
-  const known: Record<string, string> = {
-    "ALMADEN SWIM AND RACQUET CLUB": "ASRC",
-    "ALMADEN VALLEY ATHLETIC CLUB": "AVAC",
-    "BAY CLUB COURTSIDE": "Courtside",
-  };
-  const normalized = name.trim().toUpperCase();
-  if (known[normalized]) return known[normalized];
+export function organizationDisplayName(name: string): string {
+  const normalized = name.trim();
+  const mapped = organizationNames.get(normalized.toUpperCase());
+  if (mapped) return mapped;
+  if (normalized !== normalized.toUpperCase()) return normalized;
+  const lowercaseWords = new Set(["and", "at", "of", "the"]);
   return normalized
+    .toLowerCase()
     .split(/\s+/)
-    .filter((part) => part !== "AND" && part !== "&")
-    .map((part) => part[0])
-    .join("");
+    .map((part, index) => index > 0 && lowercaseWords.has(part)
+      ? part
+      : part.replace(/(^|[-'])([a-z])/g, (_, prefix: string, letter: string) => prefix + letter.toUpperCase()))
+    .join(" ");
 }
 
 export function teamDisplay(team: OrganizationScheduleTeam): { gender: string; level: string; suffix: string } {
@@ -50,16 +59,37 @@ export function teamDisplay(team: OrganizationScheduleTeam): { gender: string; l
   return { gender, level, suffix };
 }
 
+function teamIdentity(team: OrganizationScheduleTeam): string {
+  if (team.name?.trim()) return team.name.trim().toLowerCase();
+  const code = team.code.replace(/\s*[[(].*$/, "").trim();
+  const match = code.match(/((?:\d+(?:A?[MW]|MX)|C[MW])\d+(?:\.\d+)?\+?)[A-Z](-DT)?$/i);
+  return match ? `${match[1].toLowerCase()}${match[2]?.toLowerCase() || ""}` : team.league.trim().toLowerCase();
+}
+
+// Match the CLI: a suffix distinguishes teams only when the organization has
+// more than one team with the same full USTA team name. A lone "A" team needs
+// no superscript. The code identity is a compatibility fallback for APIs that
+// predate the team name field.
+export function teamSuperscript(team: OrganizationScheduleTeam, teams: OrganizationScheduleTeam[]): string {
+  const suffix = teamDisplay(team).suffix;
+  if (!suffix) return "";
+  const identity = teamIdentity(team);
+  const hasSibling = teams.some((other) => other.id !== team.id && teamIdentity(other) === identity);
+  return hasSibling ? suffix : "";
+}
+
 export function friendlyOpponent(raw: string): string {
   const value = raw.trim();
   for (const [pattern, replacement] of opponentPrefixes) {
     if (pattern.test(value)) return replacement;
   }
   const stripped = value
-    .replace(/\s+(?:18|40|55)(?:A?[MW]|MX)\d+(?:\.\d+)?\+?[A-Z](?:-DT)?(?:\s*\([^)]*\))?$/i, "")
-    .replace(/\s+C[MW]\d+(?:\.\d+)?[A-Z](?:-DT)?(?:\s*\([^)]*\))?$/i, "")
-    .replace(/\s*\([^)]*\)\s*$/, "")
+    .replace(/\s*[[(][^\])]*[\])]\s*$/i, "")
+    .replace(/\s+\d+\s*$/, "")
+    .replace(/\s+(?:(?:\d+)(?:A?[MW]|MX)|C[MW])\d+(?:\.\d+)?\+?[A-Z](?:-DT)?$/i, "")
     .trim();
+  const mapped = organizationNames.get(stripped.toUpperCase());
+  if (mapped) return mapped;
   return stripped
     .toLowerCase()
     .replace(/(^|[\s/])([a-z])/g, (_, prefix: string, letter: string) => prefix + letter.toUpperCase()) || value;
@@ -81,14 +111,15 @@ function normalizeTime(value: string): string {
   return `${String(hour).padStart(2, "0")}:${match[2]}`;
 }
 
-function outcome(entry: ScheduleEntry): Pick<PastMatchRecord, "is_win" | "is_incomplete" | "outcome_text" | "footnote"> {
+function outcome(entry: ScheduleEntry): Pick<PastMatchRecord, "is_win" | "is_incomplete" | "review_status" | "outcome_text" | "footnote"> {
   const result = entry.result.trim();
   if (/^won\b/i.test(result)) return { is_win: true, outcome_text: result.toLowerCase() };
   if (/^lost\b/i.test(result)) return { outcome_text: result.toLowerCase() };
   return {
     is_incomplete: true,
+    review_status: "needs_review",
     outcome_text: "",
-    footnote: entry.verification_pending ? "awaiting score verification" : entry.notes?.trim() || "result needs review",
+    footnote: entry.verification_pending ? "awaiting score verification" : "result needs review",
   };
 }
 
@@ -99,7 +130,7 @@ function recordKey(team: OrganizationScheduleTeam, entry: ScheduleEntry): string
 
 export function toNewsletterData(response: OrganizationScheduleResponse, boundaryDate: string): NewsletterData {
   const data: NewsletterData = {
-    org_short_name: shortOrganizationName(response.organization.name),
+    org_short_name: organizationDisplayName(response.organization.name),
     past_matches: [],
     future_matches: [],
   };
@@ -107,6 +138,7 @@ export function toNewsletterData(response: OrganizationScheduleResponse, boundar
 
   for (const team of response.teams) {
     const display = teamDisplay(team);
+    const superscript = teamSuperscript(team, response.teams);
     for (const entry of team.schedule) {
       const key = recordKey(team, entry);
       if (seen.has(key)) continue;
@@ -115,7 +147,7 @@ export function toNewsletterData(response: OrganizationScheduleResponse, boundar
         date: entry.date,
         gender_emoji: display.gender,
         level: display.level,
-        superscript: display.suffix || undefined,
+        superscript: superscript || undefined,
         is_home: entry.home_away === "Home",
         opponent: friendlyOpponent(entry.opponent),
         match_type: matchType(entry.round),

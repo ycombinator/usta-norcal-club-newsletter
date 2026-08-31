@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchOrganizationSchedule } from "./api";
-import { googleCalendarConfigured, syncGoogleCalendar } from "./calendar";
-import { downloadBoardJPEG, downloadHTML, downloadICS, downloadJSON } from "./export";
+import { downloadBoardJPEG } from "./export";
 import { PublicationPreview } from "./Preview";
 import { toNewsletterData } from "./transform";
 import type { FutureMatchRecord, MatchType, NewsletterData, PastMatchRecord, Settings } from "./types";
+import { futureMatchIssues, pastMatchIssues, reviewMatchCount } from "./validation";
+import type { FutureMatchField, PastMatchField } from "./validation";
 
 const SETTINGS_KEY = "club-match-board:settings";
 const DATA_KEY = "club-match-board:data";
@@ -22,9 +23,7 @@ const defaultSettings: Settings = {
   extraTeamIds: "",
   boundaryDate: localISODate(tomorrow),
   pastDays: 7,
-  futureDays: 14,
-  apiBaseUrl: import.meta.env.VITE_NET_RESULTS_API_URL || "https://net-results-api.onrender.com",
-  calendarName: "USTA Tennis",
+  futureDays: 7,
 };
 
 function loadStored<T>(key: string, fallback: T): T {
@@ -49,13 +48,14 @@ function isNewsletterData(value: unknown): value is NewsletterData {
 
 function outcomeState(match: PastMatchRecord): string {
   if (match.is_rained_out) return "rained";
+  if (match.is_incomplete && (match.review_status === "to_be_completed" || (!match.review_status && match.footnote?.trim().toLowerCase() === "to be completed"))) return "to-be-completed";
   if (match.is_incomplete) return "incomplete";
   if (match.is_win) return "win";
   return "loss";
 }
 
 function blankPast(date: string): PastMatchRecord {
-  return { date, gender_emoji: "👫", level: "", is_home: true, opponent: "", is_incomplete: true, outcome_text: "", match_type: "regular" };
+  return { date, gender_emoji: "👫", level: "", is_home: true, opponent: "", is_incomplete: true, review_status: "needs_review", outcome_text: "", match_type: "regular" };
 }
 
 function blankFuture(date: string): FutureMatchRecord {
@@ -80,7 +80,7 @@ export default function App() {
     if (data) localStorage.setItem(DATA_KEY, JSON.stringify(data));
   }, [data]);
 
-  const needsReview = useMemo(() => data?.past_matches.filter((match) => match.is_incomplete || match.is_rained_out).length || 0, [data]);
+  const needsReview = useMemo(() => data ? reviewMatchCount(data) : 0, [data]);
 
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings((current) => ({ ...current, [key]: value }));
 
@@ -136,10 +136,11 @@ export default function App() {
     const current = data?.past_matches[index];
     if (!current) return;
     const score = current.outcome_text?.replace(/^(won|lost)\s+/i, "") || "";
-    if (value === "rained") updatePast(index, { is_rained_out: true, is_incomplete: false, is_win: false, outcome_text: "" });
-    if (value === "incomplete") updatePast(index, { is_rained_out: false, is_incomplete: true, is_win: false, outcome_text: score });
-    if (value === "win") updatePast(index, { is_rained_out: false, is_incomplete: false, is_win: true, outcome_text: `won ${score || "3-0"}` });
-    if (value === "loss") updatePast(index, { is_rained_out: false, is_incomplete: false, is_win: false, outcome_text: `lost ${score || "0-3"}` });
+    if (value === "rained") updatePast(index, { is_rained_out: true, is_incomplete: false, review_status: undefined, is_win: false, outcome_text: "", footnote: "" });
+    if (value === "to-be-completed") updatePast(index, { is_rained_out: false, is_incomplete: true, review_status: "to_be_completed", is_win: false, outcome_text: score, footnote: "to be completed" });
+    if (value === "incomplete") updatePast(index, { is_rained_out: false, is_incomplete: true, review_status: "needs_review", is_win: false, outcome_text: score, footnote: "result needs review" });
+    if (value === "win") updatePast(index, { is_rained_out: false, is_incomplete: false, review_status: undefined, is_win: true, outcome_text: `won ${score || "3-0"}`, footnote: "" });
+    if (value === "loss") updatePast(index, { is_rained_out: false, is_incomplete: false, review_status: undefined, is_win: false, outcome_text: `lost ${score || "0-3"}`, footnote: "" });
   }
 
   async function saveJPEG(id: string, suffix: string) {
@@ -157,22 +158,6 @@ export default function App() {
     }
   }
 
-  async function syncCalendar() {
-    if (!data) return;
-    setBusy(true);
-    setError("");
-    setMessage("Waiting for Google authorization…");
-    try {
-      const count = await syncGoogleCalendar(data, settings.calendarName);
-      setMessage(`Synced ${count} upcoming matches to ${settings.calendarName}.`);
-    } catch (syncError) {
-      setError(syncError instanceof Error ? syncError.message : "Calendar sync failed.");
-      setMessage("");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <>
       <header className="site-header">
@@ -180,7 +165,7 @@ export default function App() {
         <div className="header-copy">
           <p className="eyebrow">USTA NorCal club newsletter</p>
           <h1>Turn the week’s matches into a <em>club match board.</em></h1>
-          <p>Load the official schedule, correct the details, and publish recent results and upcoming fixtures without installing the CLI.</p>
+          <p>Load the official schedule, correct the details, and publish recent results and upcoming fixtures.</p>
         </div>
         <div className="tennis-ball" aria-hidden="true">●</div>
       </header>
@@ -190,12 +175,11 @@ export default function App() {
           <div className="section-intro">
             <p className="step-label">01 · Schedule</p>
             <h2 id="setup-title">Choose the match window</h2>
-            <p>The boundary date is the first day shown as upcoming.</p>
           </div>
           <form className="settings-grid" onSubmit={(event) => { event.preventDefault(); void loadSchedule(false); }}>
-            <label>Organization ID<input value={settings.organizationId} inputMode="numeric" required onChange={(event) => updateSetting("organizationId", event.target.value)} /></label>
-            <label>Extra team IDs<input value={settings.extraTeamIds} placeholder="123, 456" onChange={(event) => updateSetting("extraTeamIds", event.target.value)} /></label>
-            <label>Boundary date<input type="date" value={settings.boundaryDate} required onChange={(event) => updateSetting("boundaryDate", event.target.value)} /></label>
+            <label>Organization ID<input value={settings.organizationId} inputMode="numeric" required onChange={(event) => updateSetting("organizationId", event.target.value)} /><span className="field-help">USTA NorCal organization ID, e.g. <a href="https://leagues.ustanorcal.com/organization.asp?id=225" target="_blank" rel="noreferrer">organization <strong>225</strong></a>.</span></label>
+            <label>Extra team IDs<input value={settings.extraTeamIds} placeholder="123, 456" onChange={(event) => updateSetting("extraTeamIds", event.target.value)} /><span className="field-help">Joint teams registered under a different organization, e.g. <a href="https://leagues.ustanorcal.com/teaminfo.asp?id=109898" target="_blank" rel="noreferrer">team <strong>109898</strong></a>.</span></label>
+            <label>Boundary date<input type="date" value={settings.boundaryDate} required onChange={(event) => updateSetting("boundaryDate", event.target.value)} /><span className="field-help">Matches before this date are recent results; matches on or after it are upcoming.</span></label>
             <label>Past days<input type="number" min="1" max="60" value={settings.pastDays} onChange={(event) => updateSetting("pastDays", Number(event.target.value))} /></label>
             <label>Future days<input type="number" min="1" max="60" value={settings.futureDays} onChange={(event) => updateSetting("futureDays", Number(event.target.value))} /></label>
             <div className="form-actions">
@@ -221,18 +205,21 @@ export default function App() {
                 <div className="table-scroll">
                   <table className="editor-table">
                     <thead><tr><th>Date</th><th>Team</th><th>Site</th><th>Opponent</th><th>Outcome</th><th>Score / note</th><th>Type</th><th><span className="visually-hidden">Remove</span></th></tr></thead>
-                    <tbody>{data.past_matches.map((match, index) => (
-                      <tr key={`${match.date}-${index}`} className={match.is_incomplete ? "needs-review" : ""}>
-                        <td><input type="date" value={match.date} onChange={(event) => updatePast(index, { date: event.target.value })} /></td>
-                        <td><div className="team-fields"><select aria-label="Gender" value={match.gender_emoji} onChange={(event) => updatePast(index, { gender_emoji: event.target.value })}><option>👭</option><option>👬</option><option>👫</option></select><input aria-label="Level" className="level-input" value={match.level} onChange={(event) => updatePast(index, { level: event.target.value })} /></div></td>
+                    <tbody>{data.past_matches.map((match, index) => {
+                      const issues = pastMatchIssues(match);
+                      const invalid = (field: PastMatchField) => issues.includes(field);
+                      return (
+                      <tr key={`${match.date}-${index}`} className={issues.length ? "needs-review" : ""}>
+                        <td><input className={invalid("date") ? "field-needs-review" : ""} aria-invalid={invalid("date")} type="date" value={match.date} onChange={(event) => updatePast(index, { date: event.target.value })} /></td>
+                        <td><div className="team-fields"><select className={invalid("gender") ? "field-needs-review" : ""} aria-invalid={invalid("gender")} aria-label="Gender" value={match.gender_emoji} onChange={(event) => updatePast(index, { gender_emoji: event.target.value })}><option>👭</option><option>👬</option><option>👫</option></select><input aria-label="Level" aria-invalid={invalid("level")} className={`level-input ${invalid("level") ? "field-needs-review" : ""}`} value={match.level} onChange={(event) => updatePast(index, { level: event.target.value })} /></div></td>
                         <td><select value={match.is_home ? "home" : "away"} onChange={(event) => updatePast(index, { is_home: event.target.value === "home" })}><option value="home">🏠 Home</option><option value="away">🚗 Away</option></select></td>
-                        <td><input value={match.opponent} onChange={(event) => updatePast(index, { opponent: event.target.value })} /></td>
-                        <td><select value={outcomeState(match)} onChange={(event) => setOutcome(index, event.target.value)}><option value="win">Won</option><option value="loss">Lost</option><option value="incomplete">Needs review</option><option value="rained">Rained out</option></select></td>
-                        <td><input value={match.is_incomplete ? match.footnote || "" : match.outcome_text || ""} placeholder={match.is_incomplete ? "What remains?" : "won 3-0"} onChange={(event) => updatePast(index, match.is_incomplete ? { footnote: event.target.value } : { outcome_text: event.target.value })} /></td>
+                        <td><input className={invalid("opponent") ? "field-needs-review" : ""} aria-invalid={invalid("opponent")} value={match.opponent} onChange={(event) => updatePast(index, { opponent: event.target.value })} /></td>
+                        <td><select className={invalid("outcome") ? "field-needs-review" : ""} aria-invalid={invalid("outcome")} value={outcomeState(match)} onChange={(event) => setOutcome(index, event.target.value)}><option value="win">Won</option><option value="loss">Lost</option><option value="rained">Rained out</option><option value="to-be-completed">To be completed</option><option value="incomplete">Needs review</option></select></td>
+                        <td><input className={invalid("result") ? "field-needs-review" : ""} aria-invalid={invalid("result")} value={match.is_incomplete ? match.footnote || "" : match.outcome_text || ""} placeholder={match.is_incomplete ? "Optional review note" : "won 3-0"} onChange={(event) => updatePast(index, match.is_incomplete ? { footnote: event.target.value } : { outcome_text: event.target.value })} /></td>
                         <td><select value={match.match_type || "regular"} onChange={(event) => updatePast(index, { match_type: event.target.value as MatchType })}><option value="regular">Regular</option><option value="playoff">Playoff</option><option value="sectionals">Sectionals</option></select></td>
                         <td><button className="remove-action" type="button" aria-label={`Remove ${match.opponent}`} onClick={() => setData({ ...data, past_matches: data.past_matches.filter((_, row) => row !== index) })}>×</button></td>
                       </tr>
-                    ))}</tbody>
+                    );})}</tbody>
                   </table>
                 </div>
               </div>
@@ -242,46 +229,47 @@ export default function App() {
                 <div className="table-scroll">
                   <table className="editor-table">
                     <thead><tr><th>Date</th><th>Time</th><th>Team</th><th>Site</th><th>Opponent</th><th>Location note</th><th>Type</th><th><span className="visually-hidden">Remove</span></th></tr></thead>
-                    <tbody>{data.future_matches.map((match, index) => (
-                      <tr key={`${match.date}-${index}`}>
-                        <td><input type="date" value={match.date} onChange={(event) => updateFuture(index, { date: event.target.value })} /></td>
-                        <td><input type="time" value={match.time || ""} onChange={(event) => updateFuture(index, { time: event.target.value })} /></td>
-                        <td><div className="team-fields"><select aria-label="Gender" value={match.gender_emoji} onChange={(event) => updateFuture(index, { gender_emoji: event.target.value })}><option>👭</option><option>👬</option><option>👫</option></select><input aria-label="Level" className="level-input" value={match.level} onChange={(event) => updateFuture(index, { level: event.target.value })} /></div></td>
+                    <tbody>{data.future_matches.map((match, index) => {
+                      const issues = futureMatchIssues(match);
+                      const invalid = (field: FutureMatchField) => issues.includes(field);
+                      return (
+                      <tr key={`${match.date}-${index}`} className={issues.length ? "needs-review" : ""}>
+                        <td><input className={invalid("date") ? "field-needs-review" : ""} aria-invalid={invalid("date")} type="date" value={match.date} onChange={(event) => updateFuture(index, { date: event.target.value })} /></td>
+                        <td><input className={invalid("time") ? "field-needs-review" : ""} aria-invalid={invalid("time")} type="time" value={match.time || ""} onChange={(event) => updateFuture(index, { time: event.target.value })} /></td>
+                        <td><div className="team-fields"><select className={invalid("gender") ? "field-needs-review" : ""} aria-invalid={invalid("gender")} aria-label="Gender" value={match.gender_emoji} onChange={(event) => updateFuture(index, { gender_emoji: event.target.value })}><option>👭</option><option>👬</option><option>👫</option></select><input aria-label="Level" aria-invalid={invalid("level")} className={`level-input ${invalid("level") ? "field-needs-review" : ""}`} value={match.level} onChange={(event) => updateFuture(index, { level: event.target.value })} /></div></td>
                         <td><select value={match.is_home ? "home" : "away"} onChange={(event) => updateFuture(index, { is_home: event.target.value === "home" })}><option value="home">🏠 Home</option><option value="away">🚗 Away</option></select></td>
-                        <td><input value={match.opponent} onChange={(event) => updateFuture(index, { opponent: event.target.value })} /></td>
+                        <td><input className={invalid("opponent") ? "field-needs-review" : ""} aria-invalid={invalid("opponent")} value={match.opponent} onChange={(event) => updateFuture(index, { opponent: event.target.value })} /></td>
                         <td><input value={match.location_note || ""} placeholder="Optional" onChange={(event) => updateFuture(index, { location_note: event.target.value })} /></td>
                         <td><select value={match.match_type || "regular"} onChange={(event) => updateFuture(index, { match_type: event.target.value as MatchType })}><option value="regular">Regular</option><option value="playoff">Playoff</option><option value="sectionals">Sectionals</option></select></td>
                         <td><button className="remove-action" type="button" aria-label={`Remove ${match.opponent}`} onClick={() => setData({ ...data, future_matches: data.future_matches.filter((_, row) => row !== index) })}>×</button></td>
                       </tr>
-                    ))}</tbody>
+                    );})}</tbody>
                   </table>
                 </div>
               </div>
             </section>
 
+            {needsReview > 0 ? (
+            <section className="publish-section publish-gate" aria-labelledby="publish-gate-title" aria-live="polite">
+              <div className="gate-number" aria-hidden="true">03</div>
+              <div><p className="step-label">03 · Publish locked</p><h2 id="publish-gate-title">Complete review to publish</h2><p>{needsReview} {needsReview === 1 ? "match still needs" : "matches still need"} required information above.</p></div>
+            </section>
+            ) : (
             <section className="publish-section" aria-labelledby="publish-title">
               <div className="section-intro split-intro">
-                <div><p className="step-label">03 · Publish</p><h2 id="publish-title">Ready for the clubhouse</h2><p>Download an image for email, preserve the editable data, or add upcoming matches to a calendar.</p></div>
+                <div><p className="step-label">03 · Publish</p><h2 id="publish-title">Ready for the clubhouse</h2><p>Download an image for sharing.</p></div>
                 <div className="publish-actions not-print">
-                  <button type="button" onClick={() => downloadJSON(data)}>Data JSON</button>
-                  <button type="button" onClick={() => publicationRef.current && downloadHTML(data, publicationRef.current)}>HTML</button>
-                  <button type="button" onClick={() => void saveJPEG("recent-board", "recent")}>Recent JPEG</button>
-                  <button type="button" onClick={() => void saveJPEG("upcoming-board", "upcoming")}>Upcoming JPEG</button>
-                  <button type="button" onClick={() => downloadICS(data)}>Calendar file</button>
-                  <button type="button" onClick={() => window.print()}>Print / PDF</button>
+                  <button className="image-action" type="button" onClick={() => void saveJPEG("recent-board", "recent")}>Recent JPEG</button>
+                  <button className="image-action" type="button" onClick={() => void saveJPEG("upcoming-board", "upcoming")}>Upcoming JPEG</button>
                 </div>
               </div>
-              <div className="calendar-sync not-print">
-                <label>Google Calendar name<input value={settings.calendarName} onChange={(event) => updateSetting("calendarName", event.target.value)} /></label>
-                <button type="button" disabled={busy || !googleCalendarConfigured()} onClick={() => void syncCalendar()}>Sync Google Calendar</button>
-                {!googleCalendarConfigured() && <small>Set <code>VITE_GOOGLE_CLIENT_ID</code> during the Pages build to enable direct sync.</small>}
-              </div>
-              <PublicationPreview data={data} ref={publicationRef} />
+              <PublicationPreview data={data} futureStartDate={settings.boundaryDate} futureDays={settings.futureDays} ref={publicationRef} />
             </section>
+            )}
           </>
         )}
       </main>
-      <footer><span>Club Match Board</span><span>Schedules from USTA NorCal via Net Results</span></footer>
+      <footer><span>Club Match Board</span><span>Schedules from USTA NorCal via <a href="https://tservelabs.com/net-results/">Net Results</a></span></footer>
     </>
   );
 }

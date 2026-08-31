@@ -27,13 +27,6 @@ function matchTeam(match: PastMatchRecord | FutureMatchRecord) {
   return <span className="team-mark">{match.gender_emoji}{match.level}{match.superscript && <sup>{match.superscript}</sup>}</span>;
 }
 
-function mondayFor(date: string): string {
-  const value = parseDate(date);
-  const day = value.getDay();
-  value.setDate(value.getDate() - ((day + 6) % 7));
-  return value.toISOString().slice(0, 10);
-}
-
 function addDays(date: string, days: number): string {
   const value = parseDate(date);
   value.setDate(value.getDate() + days);
@@ -78,8 +71,7 @@ function RecentBoard({ data }: { data: NewsletterData }) {
   );
 }
 
-function WeekBoard({ data, monday }: { data: NewsletterData; monday: string }) {
-  const days = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
+function WeekBoard({ data, days }: { data: NewsletterData; days: string[] }) {
   return (
     <article className="publication-card upcoming-board">
       <header className="publication-heading">
@@ -111,19 +103,22 @@ function WeekBoard({ data, monday }: { data: NewsletterData; monday: string }) {
   );
 }
 
-export const PublicationPreview = forwardRef<HTMLDivElement, { data: NewsletterData }>(({ data }, ref) => {
-  const weeks = [...new Set(data.future_matches.map((match) => mondayFor(match.date)))];
+interface PublicationPreviewProps {
+  data: NewsletterData;
+  futureStartDate: string;
+  futureDays: number;
+}
+
+export const PublicationPreview = forwardRef<HTMLDivElement, PublicationPreviewProps>(({ data, futureStartDate, futureDays }, ref) => {
+  const dayCount = Math.max(1, Math.floor(futureDays) || 1);
+  const visibleDays = Array.from({ length: dayCount }, (_, index) => addDays(futureStartDate, index));
+  const dateGroups: string[][] = [];
+  for (let index = 0; index < visibleDays.length; index += 7) dateGroups.push(visibleDays.slice(index, index + 7));
   return (
     <div className="publication" id="publication" ref={ref}>
       <RecentBoard data={data} />
       <div className="upcoming-collection" id="upcoming-board">
-        {weeks.map((monday) => <WeekBoard data={data} monday={monday} key={monday} />)}
-        {!weeks.length && (
-          <article className="publication-card upcoming-board">
-            <header className="publication-heading"><p>🏆 🎾 {data.org_short_name} plays USTA league 🎾 🏆</p><h2>Upcoming matches</h2></header>
-            <p className="publication-empty">No upcoming matches in this date window.</p>
-          </article>
-        )}
+        {dateGroups.map((days) => <WeekBoard data={data} days={days} key={days[0]} />)}
       </div>
     </div>
   );
